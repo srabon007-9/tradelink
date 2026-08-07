@@ -2,13 +2,11 @@
 
 TradeLink is a MERN-style project scaffold for a member skill exchange. The current implementation focuses on a React frontend boilerplate and an organized Express MVC backend scaffold that teammates can extend with their assigned features.
 
-<<<<<<< HEAD
 This line is created by tasin
 My second push (Srabon Ahmed changed this bracket line)
 whats the issue??
 
 No issues now
-=======
 ## Current Implementation
 
 - Public React pages for home, skill browsing, platform overview, contact, member login, member registration, and 404.
@@ -115,4 +113,10 @@ npm run format
 - Wire registration/contact forms to backend endpoints.
 - Add tests for frontend rendering and backend API behavior.
 - Add deployment configuration once hosting target is selected.
->>>>>>> master
+=======
+This line is created by tasin
+My second push (Srabon Ahmed changed this bracket line)
+whats the issue??
+
+No issues now
+>>>>> shupty
