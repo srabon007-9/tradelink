@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="TradeLink">
+  <rect width="48" height="48" rx="8" fill="#123047"/>
+  <path d="M12 13h24v5h-9v20h-6V18h-9v-5Z" fill="#f6f7f4"/>
+  <path d="M30 22h6v11h-6v5H18v-5h12V22Z" fill="#b7791f"/>
+</svg>

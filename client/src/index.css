@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-page: #f6f7f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef1ee;
+  --color-border: #d9ded8;
+  --color-text: #17212b;
+  --color-muted: #5f6b75;
+  --color-navy: #123047;
+  --color-navy-strong: #0b2236;
+  --color-steel: #4f6475;
+  --color-concrete: #87918c;
+  --color-accent: #b7791f;
+  --color-accent-dark: #8f5d16;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.05);
+  --shadow-nav: 0 1px 8px rgba(16, 24, 40, 0.08);
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply min-h-screen bg-page text-slate-900 font-sans;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-normal text-slate-950;
+  }
+
+  a {
+    @apply text-inherit;
+  }
+
+  ::selection {
+    background-color: rgba(183, 121, 31, 0.22);
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-page;
+    background-image:
+      linear-gradient(rgba(18, 48, 71, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(18, 48, 71, 0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .container-xl {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section {
+    @apply py-14 sm:py-16 lg:py-20;
+  }
+
+  .surface-card {
+    @apply bg-white border border-concrete-200 rounded-lg shadow-card;
+  }
+
+  .surface-panel {
+    @apply bg-white border border-concrete-200 rounded-lg;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center text-xs font-semibold uppercase tracking-[0.12em] text-accent-700;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-navy-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-navy-900 focus:outline-none focus:ring-2 focus:ring-accent-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-concrete-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:bg-concrete-50 focus:outline-none focus:ring-2 focus:ring-accent-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .input-base {
+    @apply w-full rounded-md border border-concrete-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-concrete-500 shadow-sm transition-colors duration-150 focus:border-navy-700 focus:outline-none focus:ring-2 focus:ring-navy-700/15;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-lg border border-concrete-200 bg-white;
+  }
+}
