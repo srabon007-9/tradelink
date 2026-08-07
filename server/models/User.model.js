@@ -24,8 +24,6 @@
 
 'use strict';
 
-const mongoose = require('mongoose');
-
 // Schema will be implemented in the authentication feature sprint.
 // const UserSchema = new mongoose.Schema({ ... }, { timestamps: true });
 

@@ -25,9 +25,17 @@ const api = axios.create({
 // ─── Request Interceptor ──────────────────────────────────────────────────────
 api.interceptors.request.use(
   config => {
-    // TODO: attach JWT token from localStorage / context
-    // const token = localStorage.getItem('accessToken');
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // TODO: remove this demo owner header when the full authentication module is implemented.
+    if (!token && import.meta.env.DEV) {
+      config.headers['x-demo-user-id'] =
+        localStorage.getItem('demoUserId') || '64f1a1b2c3d4e5f60718293a';
+    }
+
     return config;
   },
   error => Promise.reject(error)

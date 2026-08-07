@@ -28,8 +28,8 @@ const BrowseSkills = () => (
         />
         <select id="browse-category-filter" className="input-base cursor-pointer" defaultValue="">
           <option value="">All categories</option>
-          {SKILL_CATEGORIES.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.label}</option>
+          {SKILL_CATEGORIES.map(category => (
+            <option key={category} value={category}>{category}</option>
           ))}
         </select>
         <select id="browse-sort-filter" className="input-base cursor-pointer" defaultValue="match">
@@ -42,9 +42,9 @@ const BrowseSkills = () => (
 
       <div className="mb-6 flex flex-wrap gap-2" role="list" aria-label="Skill category filters">
         <button className="badge bg-navy-50 text-navy-900 border border-navy-100">All</button>
-        {SKILL_CATEGORIES.map(cat => (
-          <button key={cat.id} id={`category-chip-${cat.id}`} className="badge bg-white text-steel-700 border border-concrete-200 hover:bg-concrete-50">
-            {cat.label}
+        {SKILL_CATEGORIES.map(category => (
+          <button key={category} id={`category-chip-${category.toLowerCase().replace(/\W+/g, '-')}`} className="badge bg-white text-steel-700 border border-concrete-200 hover:bg-concrete-50">
+            {category}
           </button>
         ))}
       </div>

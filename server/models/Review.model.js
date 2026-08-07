@@ -16,8 +16,6 @@
 
 'use strict';
 
-const mongoose = require('mongoose');
-
 // Schema will be implemented in the reputation feature sprint.
 // const ReviewSchema = new mongoose.Schema({ ... }, { timestamps: true });
 

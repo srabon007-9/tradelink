@@ -11,7 +11,7 @@ const SIDEBAR_LINKS = [
   { label: 'Overview', to: ROUTES.DASHBOARD, icon: 'OV' },
   { label: 'Browse Skills', to: ROUTES.BROWSE, icon: 'SK' },
   { label: 'My Profile', to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF' },
-  { label: 'My Skills', to: `${ROUTES.DASHBOARD}/skills`, icon: 'MS' },
+  { label: 'My Skills', to: ROUTES.MY_SKILLS, icon: 'MS' },
   { label: 'Requests', to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
   { label: 'Messages', to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
   { label: 'Reviews', to: `${ROUTES.DASHBOARD}/reviews`, icon: 'RV' },

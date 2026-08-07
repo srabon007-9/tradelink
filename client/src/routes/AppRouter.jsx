@@ -17,6 +17,10 @@ import Login        from '../pages/Login';
 import Register     from '../pages/Register';
 import BrowseSkills from '../pages/BrowseSkills';
 import Dashboard    from '../pages/Dashboard';
+import MySkills     from '../pages/MySkills';
+import CreateSkill  from '../pages/CreateSkill';
+import EditSkill    from '../pages/EditSkill';
+import SkillDetails from '../pages/SkillDetails';
 import About        from '../pages/About';
 import Contact      from '../pages/Contact';
 import NotFound     from '../pages/NotFound';
@@ -43,7 +47,11 @@ const router = createBrowserRouter([
     element: <DashboardLayout />,
     children: [
       { index: true, element: <Dashboard /> },
-      // Future: profile, skill management, requests, messages, reviews...
+      { path: 'skills', element: <MySkills /> },
+      { path: 'skills/new', element: <CreateSkill /> },
+      { path: 'skills/:id', element: <SkillDetails /> },
+      { path: 'skills/:id/edit', element: <EditSkill /> },
+      // Future: profile, requests, messages, reviews...
     ],
   },
 
