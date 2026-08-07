@@ -8,14 +8,15 @@ import Avatar from '../components/ui/Avatar';
 import { ROUTES } from '../constants';
 
 const SIDEBAR_LINKS = [
-  { label: 'Overview', to: ROUTES.DASHBOARD, icon: 'OV' },
-  { label: 'Browse Skills', to: ROUTES.BROWSE, icon: 'SK' },
-  { label: 'My Profile', to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF' },
-  { label: 'My Skills', to: `${ROUTES.DASHBOARD}/skills`, icon: 'MS' },
-  { label: 'Requests', to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
-  { label: 'Messages', to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
-  { label: 'Reviews', to: `${ROUTES.DASHBOARD}/reviews`, icon: 'RV' },
-  { label: 'Settings', to: `${ROUTES.DASHBOARD}/settings`, icon: 'ST' },
+  { label: 'Overview',       to: ROUTES.DASHBOARD,             icon: 'OV' },
+  { label: 'Browse Skills',  to: ROUTES.BROWSE,                icon: 'SK' },
+  { label: 'Market Prices',  to: `${ROUTES.DASHBOARD}/prices`, icon: 'MP' },
+  { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`,  icon: 'PF' },
+  { label: 'My Skills',      to: `${ROUTES.DASHBOARD}/skills`,   icon: 'MS' },
+  { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
+  { label: 'Messages',       to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
+  { label: 'Reviews',        to: `${ROUTES.DASHBOARD}/reviews`,  icon: 'RV' },
+  { label: 'Settings',       to: `${ROUTES.DASHBOARD}/settings`, icon: 'ST' },
 ];
 
 const DashboardLayout = () => (
