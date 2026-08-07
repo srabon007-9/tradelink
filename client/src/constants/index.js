@@ -40,6 +40,19 @@ export const SKILL_CATEGORIES = [
   { id: 'business-support', label: 'Business Support' },
 ];
 
+export const AVAILABILITY_OPTIONS = [
+  { id: 'available', label: 'Available' },
+  { id: 'limited', label: 'Limited' },
+  { id: 'booked', label: 'Booked' },
+];
+
+export const BROWSE_SORT_OPTIONS = [
+  { id: 'match', label: 'Newest First' },
+  { id: 'price-low', label: 'Credits: Low to High' },
+  { id: 'price-high', label: 'Credits: High to Low' },
+  { id: 'availability', label: 'Availability' },
+];
+
 export const SKILL_LISTINGS = [
   {
     id: 1,

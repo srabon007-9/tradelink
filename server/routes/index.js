@@ -16,6 +16,7 @@ const userRoutes = require('./user.routes');
 const projectRoutes = require('./project.routes');
 const procurementRoutes = require('./procurement.routes');
 const commercialRoutes = require('./commercial.routes');
+const skillRoutes = require('./skill.routes');
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.use('/users', userRoutes);
 router.use('/projects', projectRoutes);
 router.use('/procurement', procurementRoutes);
 router.use('/commercial', commercialRoutes);
+router.use('/skills', skillRoutes);
 
 module.exports = router;
