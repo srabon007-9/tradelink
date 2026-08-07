@@ -25,7 +25,7 @@ const validateEnv = () => {
   if (missing.length > 0) {
     throw new Error(
       `[ENV] Missing required environment variables: ${missing.join(', ')}\n` +
-        `Please copy .env.example to server/.env and fill in the values.`
+      `Please copy .env.example to server/.env and fill in the values.`
     );
   }
 };

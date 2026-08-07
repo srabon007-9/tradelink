@@ -25,9 +25,8 @@ const api = axios.create({
 // ─── Request Interceptor ──────────────────────────────────────────────────────
 api.interceptors.request.use(
   config => {
-    // TODO: attach JWT token from localStorage / context
-    // const token = localStorage.getItem('accessToken');
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = localStorage.getItem('tl_token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   error => Promise.reject(error)
