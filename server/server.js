@@ -10,9 +10,11 @@
 
 'use strict';
 
-const { validateEnv } = require('./config/env');
-const connectDB = require('./config/db');
-const logger = require('./utils/logger');
+const { validateEnv }          = require('./config/env');
+const connectDB                = require('./config/db');
+const logger                   = require('./utils/logger');
+const { seedCategories }       = require('./services/valuation.service');
+const { startValuationCron }   = require('./jobs/valuationCron');
 
 // Validate & load environment variables first
 validateEnv();
@@ -27,6 +29,12 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
+
+    // Seed skill categories and run initial valuation (skips if already seeded)
+    await seedCategories();
+
+    // Start scheduled valuation recalculation (every 15 minutes)
+    startValuationCron();
 
     const server = app.listen(PORT, () => {
       logger.info(`TradeLink server running in ${NODE_ENV} mode on port ${PORT}`);

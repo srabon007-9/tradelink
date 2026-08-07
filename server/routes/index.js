@@ -11,19 +11,21 @@
 
 const express = require('express');
 
-const authRoutes = require('./auth.routes');
-const userRoutes = require('./user.routes');
-const projectRoutes = require('./project.routes');
+const authRoutes        = require('./auth.routes');
+const userRoutes        = require('./user.routes');
+const projectRoutes     = require('./project.routes');
 const procurementRoutes = require('./procurement.routes');
-const commercialRoutes = require('./commercial.routes');
+const commercialRoutes  = require('./commercial.routes');
+const valuationRoutes   = require('./valuation.routes');
 
 const router = express.Router();
 
 // ─── Feature Route Mounts ─────────────────────────────────────────────────────
-router.use('/auth', authRoutes);
-router.use('/users', userRoutes);
-router.use('/projects', projectRoutes);
+router.use('/auth',        authRoutes);
+router.use('/users',       userRoutes);
+router.use('/projects',    projectRoutes);
 router.use('/procurement', procurementRoutes);
-router.use('/commercial', commercialRoutes);
+router.use('/commercial',  commercialRoutes);
+router.use('/valuations',  valuationRoutes);
 
 module.exports = router;

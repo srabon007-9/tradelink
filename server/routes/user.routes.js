@@ -1,22 +1,18 @@
-/**
- * routes/user.routes.js — User Routes
- *
- * TODO (Member 1 — Backend):
- *  - GET    /api/users/me           (get current user profile)
- *  - PATCH  /api/users/me           (update profile)
- *  - DELETE /api/users/me           (deactivate account)
- *  - GET    /api/users/:id          (get public profile)
- *  - GET    /api/users/:id/projects (list assigned projects)
- */
-
 'use strict';
 
+/**
+ * routes/user.routes.js — User Routes
+ */
+
 const express = require('express');
-// const userController = require('../controllers/user.controller');
-// const { protect } = require('../middleware/auth');
+const userController = require('../controllers/user.controller');
 
 const router = express.Router();
 
-// Routes will be implemented in the user profile feature sprint.
+// GET /api/users — list all members
+router.get('/', userController.getUsers);
+
+// GET /api/users/:id — single member public profile
+router.get('/:id', userController.getUser);
 
 module.exports = router;
