@@ -36,6 +36,12 @@ const validateCreateSkill = runValidation([
   body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 120 }),
   body('description').optional().trim().isLength({ max: 1000 }),
   body('category').isIn(Skill.CATEGORY_VALUES).withMessage('Invalid category'),
+  body('categoryLabel')
+    .if(body('category').equals('other'))
+    .trim()
+    .notEmpty()
+    .withMessage('Please name the skill category (e.g. "Music Lessons") when choosing "Other"')
+    .isLength({ max: 60 }),
   body('baseRate').isFloat({ min: 0 }).withMessage('baseRate must be a positive number'),
   body('availability').optional({ checkFalsy: true }).isIn(Skill.AVAILABILITY_VALUES),
   body('location').optional().trim().isLength({ max: 120 }),

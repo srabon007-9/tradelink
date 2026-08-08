@@ -26,6 +26,7 @@ const CATEGORY_VALUES = [
   'digital-marketing',
   'data-analysis',
   'business-support',
+  'other',
 ];
 
 const AVAILABILITY_VALUES = ['available', 'limited', 'booked'];
@@ -51,6 +52,23 @@ const SkillSchema = new mongoose.Schema(
       required: [true, 'Category is required'],
       enum: CATEGORY_VALUES,
       index: true,
+    },
+    // Only used (and required) when category === 'other' — lets a user post
+    // a skill that isn't in the fixed list yet (e.g. "Harmonium Lessons").
+    // All "other" listings still share one live-value bucket on Browse;
+    // this is just the human-readable name shown on that specific listing.
+    categoryLabel: {
+      type: String,
+      trim: true,
+      maxlength: 60,
+      default: '',
+      validate: {
+        validator: function (value) {
+          if (this.category !== 'other') return true;
+          return Boolean(value && value.trim().length > 0);
+        },
+        message: 'categoryLabel is required when category is "other"',
+      },
     },
     baseRate: {
       type: Number,
@@ -101,7 +119,7 @@ const SkillSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-SkillSchema.index({ title: 'text', description: 'text', tags: 'text' });
+SkillSchema.index({ title: 'text', description: 'text', tags: 'text', categoryLabel: 'text' });
 SkillSchema.index({ status: 1, category: 1, availability: 1 });
 
 SkillSchema.statics.CATEGORY_VALUES = CATEGORY_VALUES;

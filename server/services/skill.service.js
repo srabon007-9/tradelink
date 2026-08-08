@@ -61,7 +61,14 @@ const getBrowseData = async ({
   const searchTerm = search.trim().toLowerCase();
   if (searchTerm) {
     enriched = enriched.filter(skill => {
-      const haystack = [skill.title, skill.description, skill.provider?.name, skill.location, ...(skill.tags || [])]
+      const haystack = [
+        skill.title,
+        skill.description,
+        skill.categoryLabel,
+        skill.provider?.name,
+        skill.location,
+        ...(skill.tags || []),
+      ]
         .join(' ')
         .toLowerCase();
       return haystack.includes(searchTerm);
@@ -135,6 +142,7 @@ const createSkill = async data => {
     title: data.title,
     description: data.description || '',
     category: data.category,
+    categoryLabel: data.category === 'other' ? data.categoryLabel : '',
     baseRate: data.baseRate,
     availability: data.availability || 'available',
     location: data.location || 'Remote',
