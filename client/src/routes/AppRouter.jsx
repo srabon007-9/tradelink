@@ -12,18 +12,19 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import DashboardLayout from '../layouts/DashboardLayout';
 
-import Home         from '../pages/Home';
-import Login        from '../pages/Login';
-import Register     from '../pages/Register';
+import Home from '../pages/Home';
+import Login from '../pages/Login';
+import Register from '../pages/Register';
 import BrowseSkills from '../pages/BrowseSkills';
-import Dashboard    from '../pages/Dashboard';
-import MySkills     from '../pages/MySkills';
-import CreateSkill  from '../pages/CreateSkill';
-import EditSkill    from '../pages/EditSkill';
+import Dashboard from '../pages/Dashboard';
+import MySkills from '../pages/MySkills';
+import CreateSkill from '../pages/CreateSkill';
+import EditSkill from '../pages/EditSkill';
 import SkillDetails from '../pages/SkillDetails';
-import About        from '../pages/About';
-import Contact      from '../pages/Contact';
-import NotFound     from '../pages/NotFound';
+import SkillPrices from '../pages/SkillPrices';
+import About from '../pages/About';
+import Contact from '../pages/Contact';
+import NotFound from '../pages/NotFound';
 
 const router = createBrowserRouter([
   // ─── Public Routes (MainLayout: Navbar + Footer) ─────────────────────────
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
       { path: 'skills/new', element: <CreateSkill /> },
       { path: 'skills/:id', element: <SkillDetails /> },
       { path: 'skills/:id/edit', element: <EditSkill /> },
+      { path: 'prices', element: <SkillPrices /> },
       // Future: profile, requests, messages, reviews...
     ],
   },
