@@ -18,6 +18,8 @@ import Register     from '../pages/Register';
 import BrowseSkills from '../pages/BrowseSkills';
 import Dashboard    from '../pages/Dashboard';
 import SkillPrices  from '../pages/SkillPrices';
+import MySkills     from '../pages/MySkills';
+import Requests     from '../pages/Requests';
 import About        from '../pages/About';
 import Contact      from '../pages/Contact';
 import NotFound     from '../pages/NotFound';
@@ -45,7 +47,9 @@ const router = createBrowserRouter([
     children: [
       { index: true,         element: <Dashboard /> },
       { path: 'prices',      element: <SkillPrices /> },
-      // Future: profile, skill management, requests, messages, reviews...
+      { path: 'skills',      element: <MySkills /> },
+      { path: 'requests',    element: <Requests /> },
+      // Future: profile, messages, reviews...
     ],
   },
 

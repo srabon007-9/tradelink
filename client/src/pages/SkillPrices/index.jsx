@@ -145,7 +145,6 @@ const SkillPrices = () => {
                     {/* Live Price */}
                     <div>
                       <p className="text-lg font-bold text-navy-900">{fmt(cat.priceBDT)}</p>
-                      <p className="text-xs text-steel-400">base {fmt(cat.baseRate)}</p>
                     </div>
 
                     {/* Demand */}
