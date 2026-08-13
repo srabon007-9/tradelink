@@ -20,6 +20,7 @@ import Dashboard    from '../pages/Dashboard';
 import SkillPrices  from '../pages/SkillPrices';
 import MySkills     from '../pages/MySkills';
 import Requests     from '../pages/Requests';
+import Transactions from '../pages/Transactions';
 import About        from '../pages/About';
 import Contact      from '../pages/Contact';
 import NotFound     from '../pages/NotFound';
@@ -49,6 +50,7 @@ const router = createBrowserRouter([
       { path: 'prices',      element: <SkillPrices /> },
       { path: 'skills',      element: <MySkills /> },
       { path: 'requests',    element: <Requests /> },
+      { path: 'transactions', element: <Transactions /> },
       // Future: profile, messages, reviews...
     ],
   },

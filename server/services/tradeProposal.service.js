@@ -13,6 +13,10 @@
  * valuation.service.js's updateDemand() was built for — creating a
  * proposal counts as +1 demand, and it's released (-1) the moment the
  * proposal stops being pending (accepted, declined, or cancelled).
+ *
+ * The instant a proposal is accepted, an escrow hold is opened for it
+ * (see transaction.service.js / the "Transaction" feature) — the agreed
+ * price is held pending until both sides confirm the work was done.
  */
 
 const TradeProposal = require('../models/TradeProposal.model');
@@ -21,6 +25,7 @@ const SkillCategory = require('../models/SkillCategory.model');
 const User = require('../models/User.model');
 const valuationService = require('./valuation.service');
 const googleCalendarService = require('./googleCalendar.service');
+const transactionService = require('./transaction.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -160,6 +165,7 @@ const tradeProposalService = {
 
     await proposal.save();
     await adjustDemand(proposal.category, -1);
+    await transactionService.createForProposal(proposal);
 
     return proposal;
   },

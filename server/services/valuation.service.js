@@ -3,28 +3,43 @@
 /**
  * services/valuation.service.js — Dynamic Valuation Engine
  *
- * Core logic for TradeLink's credit pricing system.
+ * Core logic for TradeLink's live BDT pricing system. Each skill category
+ * has its own baseRate, floor, ceiling, and alpha — this is never a single
+ * global price, it's computed per category from that category's own
+ * live supply (active providers) and demand (open trade proposals).
  *
  * FORMULA
  * ───────
- *   effectiveSupply = max(supply, 1)           // avoid divide-by-zero
- *   ratio           = demand / effectiveSupply  // raw demand-to-supply ratio
- *   multiplier      = ratio ^ alpha             // power-law sensitivity curve
- *   rawValue        = baseRate × multiplier
- *   creditValue     = clamp(rawValue, floor, ceiling)
+ *   ratio      = (demand + 1) / (supply + 1)   // Laplace-smoothed ratio —
+ *                                               // no divide-by-zero, and no
+ *                                               // instant cliff to the floor
+ *                                               // the moment supply arrives
+ *                                               // with zero demand yet
+ *   multiplier = ratio ^ alpha                  // power-law sensitivity curve
+ *   rawValue   = baseRate × multiplier
+ *   priceBDT   = clamp(rawValue, floor, ceiling)
  *
- * WHY POWER-LAW (alpha = 0.5)?
- * ────────────────────────────
- *   - At ratio = 1 (balanced): multiplier = 1 → price = baseRate (fair market)
- *   - At ratio = 4 (4× demand): multiplier = 2 → 100% premium
- *   - At ratio = 0.25 (4× supply): multiplier = 0.5 → 50% discount
- *   - Square root dampens extreme short-term spikes without flattening the signal
- *   - alpha is stored and configurable per category for future tuning
+ * WHY (demand + 1) / (supply + 1) INSTEAD OF demand / supply?
+ * ─────────────────────────────────────────────────────────────
+ *   - demand = supply = 0 (brand new category): ratio = 1 → price = baseRate,
+ *     with no special-cased branch needed — the smoothing makes it fall out
+ *     of the formula naturally.
+ *   - First provider joins, demand still 0: ratio = 1/2 = 0.5 → multiplier
+ *     ≈ 0.71 → price eases down toward the floor, it doesn't jump straight
+ *     to it the instant one provider shows up.
+ *   - Balanced market (demand ≈ supply): ratio ≈ 1 → price ≈ baseRate.
+ *   - High demand (demand > supply): ratio > 1 → price rises above baseRate,
+ *     scaling with the square root of the ratio (alpha = 0.5) so a demand
+ *     spike doesn't cause wild, linear price swings.
+ *   - alpha is stored and configurable per category for future tuning.
  *
  * RECALCULATION STRATEGY: Hybrid (event-driven + cron safety net)
  * ───────────────────────────────────────────────────────────────
  *   Primary:  event-driven — recalculate immediately when supply/demand changes
  *   Backup:   cron job every 15 minutes — ensures no stale state accumulates
+ *   Every recalculation writes a timestamped ValuationSnapshot, which is
+ *   what later powers historical price charts and dispute resolution
+ *   (showing what the price actually was at the moment a trade was agreed).
  */
 
 const SkillCategory    = require('../models/SkillCategory.model');
@@ -41,23 +56,11 @@ const logger           = require('../utils/logger');
  * @returns {{ ratio, multiplier, rawValue, priceBDT, wasClamped, clampReason, explanation }}
  */
 const computeValue = ({ demand, supply, baseRate, alpha, floor, ceiling }) => {
-  // Edge case: no market activity at all → return base rate as neutral price
-  if (demand === 0 && supply === 0) {
-    return {
-      ratio:       1,
-      multiplier:  1,
-      rawValue:    baseRate,
-      priceBDT:    baseRate,
-      wasClamped:  false,
-      clampReason: null,
-      explanation:
-        'No active providers or open requests yet. ' +
-        `Using base rate of ৳${baseRate} BDT as the default market price.`,
-    };
-  }
-
-  const effectiveSupply = Math.max(supply, 1);
-  const ratio           = demand / effectiveSupply;
+  // Laplace-smoothed ratio — never divides by zero, and never cliffs
+  // straight to the floor the moment the first provider joins with no
+  // demand yet. demand = supply = 0 naturally resolves to ratio = 1
+  // (price = baseRate) with no special-cased branch required.
+  const ratio = (demand + 1) / (supply + 1);
 
   // Power-law: ratio^alpha. When alpha=0.5 this is the square root.
   const multiplier = Math.pow(ratio, alpha);
@@ -65,11 +68,11 @@ const computeValue = ({ demand, supply, baseRate, alpha, floor, ceiling }) => {
   const rawValue = baseRate * multiplier;
 
   // Round to 2 decimal places then clamp
-  const rounded     = Math.round(rawValue * 100) / 100;
-  const creditValue = Math.max(floor, Math.min(ceiling, rounded));
+  const rounded  = Math.round(rawValue * 100) / 100;
+  const priceBDT = Math.max(floor, Math.min(ceiling, rounded));
 
-  const wasClamped  = creditValue !== rounded;
-  const clampReason = creditValue <= floor ? 'floor' : creditValue >= ceiling ? 'ceiling' : null;
+  const wasClamped  = priceBDT !== rounded;
+  const clampReason = priceBDT <= floor ? 'floor' : priceBDT >= ceiling ? 'ceiling' : null;
 
   const clampNote =
     clampReason === 'floor'
@@ -78,14 +81,16 @@ const computeValue = ({ demand, supply, baseRate, alpha, floor, ceiling }) => {
       ? ` (ceiling applied — maximum is ৳${ceiling} BDT)`
       : '';
 
-  const priceBDT = Math.max(floor, Math.min(ceiling, rounded));
+  const noActivityNote =
+    demand === 0 && supply === 0 ? ' No active providers or open requests yet — this is the base rate.' : '';
+
   const explanation =
     `Supply: ${supply} active provider${supply !== 1 ? 's' : ''}. ` +
     `Demand: ${demand} open request${demand !== 1 ? 's' : ''}. ` +
-    `Ratio = ${demand}/${effectiveSupply} = ${ratio.toFixed(4)}. ` +
+    `Ratio = (${demand}+1)/(${supply}+1) = ${ratio.toFixed(4)}. ` +
     `Multiplier = ${ratio.toFixed(4)}^${alpha} = ${multiplier.toFixed(6)}. ` +
     `Raw price = ${baseRate} × ${multiplier.toFixed(6)} = ${rawValue.toFixed(2)} BDT. ` +
-    `Final price = ৳${priceBDT}${clampNote}.`;
+    `Final price = ৳${priceBDT}${clampNote}.${noActivityNote}`;
 
   return { ratio, multiplier, rawValue, priceBDT, wasClamped, clampReason, explanation };
 };

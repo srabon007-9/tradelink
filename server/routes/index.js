@@ -20,6 +20,7 @@ const valuationRoutes        = require('./valuation.routes');
 const skillListingRoutes     = require('./skillListing.routes');
 const categoryBrowsingRoutes = require('./categoryBrowsing.routes');
 const tradeProposalRoutes    = require('./tradeProposal.routes');
+const transactionRoutes      = require('./transaction.routes');
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/valuations',      valuationRoutes);
 router.use('/skill-listings',  skillListingRoutes);
 router.use('/browse',          categoryBrowsingRoutes);
 router.use('/trade-proposals', tradeProposalRoutes);
+router.use('/transactions',    transactionRoutes);
 
 module.exports = router;

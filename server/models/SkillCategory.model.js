@@ -59,7 +59,9 @@ const SkillCategorySchema = new mongoose.Schema(
     },
     ceiling: {
       type: Number,
-      default: 10000, // maximum price ever (~6.7× base)
+      default: function () {
+        return (this.baseRate ?? 1500) * 5; // maximum price ever — 5× base rate
+      },
     },
     alpha: {
       type: Number,

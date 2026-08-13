@@ -105,7 +105,7 @@ const SkillPrices = () => {
         <div className="border-b border-concrete-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-950">All Skill Categories</h2>
           <p className="mt-1 text-sm text-steel-600">
-            Price = base rate × (demand ÷ supply)^0.5, clamped between floor and ceiling.
+            Price = base rate × ((demand + 1) ÷ (supply + 1))^0.5, clamped between floor and ceiling.
           </p>
         </div>
 
@@ -184,8 +184,8 @@ const SkillPrices = () => {
       {/* ── Formula Note ───────────────────────────────────────────── */}
       <div className="rounded-lg border border-concrete-200 bg-concrete-50 p-4 text-xs text-steel-500">
         <span className="font-semibold text-steel-700">How prices are calculated: </span>
-        Price = base rate (৳1,500) × (open requests ÷ active providers)^0.5 —
-        clamped between ৳500 (floor) and ৳10,000 (ceiling).
+        Price = each category's own base rate × ((open requests + 1) ÷ (active providers + 1))^0.5 —
+        clamped between that category's floor and ceiling (5× its base rate).
         Prices recalculate automatically every 15 minutes and instantly on any supply or demand change.
       </div>
 
