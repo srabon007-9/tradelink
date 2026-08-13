@@ -25,7 +25,6 @@ export const BRAND = {
 };
 
 export const NAV_LINKS = [
-  { label: 'Browse Skills', to: ROUTES.BROWSE },
   { label: 'How It Works', to: '/#process' },
   { label: 'About', to: ROUTES.ABOUT },
   { label: 'Contact', to: ROUTES.CONTACT },
