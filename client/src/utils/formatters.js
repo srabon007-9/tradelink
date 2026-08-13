@@ -18,6 +18,9 @@ export const formatCompactCurrency = amount =>
 
 export const formatPercent = value => `${Math.round(value)}%`;
 
+export const formatCredits = value =>
+  `${new Intl.NumberFormat('en-US').format(Math.round(value ?? 0))} cr`;
+
 export const truncate = (str, maxLength = 80) =>
   str.length > maxLength ? `${str.slice(0, maxLength)}...` : str;
 

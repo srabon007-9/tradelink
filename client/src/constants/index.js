@@ -31,13 +31,29 @@ export const NAV_LINKS = [
   { label: 'Contact', to: ROUTES.CONTACT },
 ];
 
+// `theme` and `icon` power the Browse page's category cards and are ignored
+// anywhere else SKILL_CATEGORIES is used (id/label only).
 export const SKILL_CATEGORIES = [
-  { id: 'web-development', label: 'Web Development' },
-  { id: 'graphic-design', label: 'Graphic Design' },
-  { id: 'content-writing', label: 'Content Writing' },
-  { id: 'digital-marketing', label: 'Digital Marketing' },
-  { id: 'data-analysis', label: 'Data Analysis' },
-  { id: 'business-support', label: 'Business Support' },
+  { id: 'web-development', label: 'Web Development', theme: 'navy', icon: 'code' },
+  { id: 'graphic-design', label: 'Graphic Design', theme: 'accent', icon: 'palette' },
+  { id: 'content-writing', label: 'Content Writing', theme: 'emerald', icon: 'pen' },
+  { id: 'digital-marketing', label: 'Digital Marketing', theme: 'amber', icon: 'megaphone' },
+  { id: 'data-analysis', label: 'Data Analysis', theme: 'steel', icon: 'chart' },
+  { id: 'business-support', label: 'Business Support', theme: 'violet', icon: 'briefcase' },
+  { id: 'other', label: 'Other', theme: 'concrete', icon: 'sparkles' },
+];
+
+export const AVAILABILITY_OPTIONS = [
+  { id: 'available', label: 'Available' },
+  { id: 'limited', label: 'Limited' },
+  { id: 'booked', label: 'Booked' },
+];
+
+export const BROWSE_SORT_OPTIONS = [
+  { id: 'match', label: 'Newest First' },
+  { id: 'price-low', label: 'Credits: Low to High' },
+  { id: 'price-high', label: 'Credits: High to Low' },
+  { id: 'availability', label: 'Availability' },
 ];
 
 export const SKILL_LISTINGS = [
