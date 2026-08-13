@@ -17,7 +17,7 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
-    role: 'client',
+    phone: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -133,19 +133,19 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="register-role" className="mb-1.5 block text-sm font-medium text-steel-700">
-                Role
+              <label htmlFor="register-phone" className="mb-1.5 block text-sm font-medium text-steel-700">
+                Phone Number
               </label>
-              <select
-                id="register-role"
-                name="role"
+              <input
+                id="register-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="e.g. +880 1XXX XXXXXX"
                 className="input-base"
-                value={form.role}
+                value={form.phone}
                 onChange={handleChange}
-              >
-                <option value="client">Client</option>
-                <option value="operations">Operations</option>
-              </select>
+              />
             </div>
 
             <Button id="register-submit-btn" type="submit" fullWidth disabled={isLoading}>

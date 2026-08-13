@@ -9,7 +9,7 @@ import Container from '../../components/layout/Container';
 import Avatar from '../../components/ui/Avatar';
 
 const Testimonials = () => (
-  <Section className="bg-white">
+  <Section className="bg-page">
     <Container>
       <SectionHeading
         eyebrow="Team Handoff"

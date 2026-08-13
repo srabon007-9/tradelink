@@ -22,8 +22,9 @@ const SIDEBAR_LINKS = [
 ];
 
 const DashboardLayout = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const firstName = user?.name?.split(' ')[0] || 'Member Workspace';
 
   const handleExit = async () => {
     await logout();
@@ -63,7 +64,7 @@ const DashboardLayout = () => {
         <div className="flex items-center gap-3 rounded-md bg-concrete-50 p-3">
           <Avatar initials="OP" size="sm" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-950">Member Workspace</p>
+            <p className="truncate text-sm font-semibold text-slate-950">{firstName}</p>
             <p className="truncate text-xs text-steel-600">Demo Account</p>
           </div>
           <button

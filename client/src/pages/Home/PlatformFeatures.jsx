@@ -8,7 +8,7 @@ import Section from '../../components/layout/Section';
 import Container from '../../components/layout/Container';
 
 const PlatformFeatures = () => (
-  <Section className="bg-page">
+  <Section className="bg-white">
     <Container>
       <SectionHeading
         eyebrow="Boilerplate Modules"

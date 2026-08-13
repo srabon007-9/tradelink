@@ -30,10 +30,10 @@ const generateTokens = userId => ({
 const authService = {
   /**
    * Register a new user.
-   * @param {{ name, email, password, role }} data
+   * @param {{ name, email, password, phone }} data
    * @returns {{ user, accessToken, refreshToken }}
    */
-  registerUser: async ({ name, email, password, role }) => {
+  registerUser: async ({ name, email, password, phone }) => {
     // Check if email already exists
     const existing = await User.findOne({ email });
     if (existing) {
@@ -42,8 +42,9 @@ const authService = {
       throw err;
     }
 
-    // Create user (password is hashed by the pre-save hook)
-    const user = await User.create({ name, email, password, role });
+    // Create user (password is hashed by the pre-save hook). role isn't
+    // taken from input — it defaults to 'client' on the schema.
+    const user = await User.create({ name, email, password, phone });
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user._id);

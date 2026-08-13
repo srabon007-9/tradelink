@@ -37,10 +37,11 @@ const validateRegister = [
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters'),
 
-  body('role')
+  body('phone')
     .optional()
-    .isIn(['client', 'operations'])
-    .withMessage('Role must be client or operations'),
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Phone number must be under 20 characters'),
 
   validate,
 ];

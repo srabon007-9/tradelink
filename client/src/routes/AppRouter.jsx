@@ -21,6 +21,7 @@ import SkillPrices  from '../pages/SkillPrices';
 import MySkills     from '../pages/MySkills';
 import Requests     from '../pages/Requests';
 import Transactions from '../pages/Transactions';
+import Profile      from '../pages/Profile';
 import About        from '../pages/About';
 import Contact      from '../pages/Contact';
 import NotFound     from '../pages/NotFound';
@@ -51,7 +52,8 @@ const router = createBrowserRouter([
       { path: 'skills',      element: <MySkills /> },
       { path: 'requests',    element: <Requests /> },
       { path: 'transactions', element: <Transactions /> },
-      // Future: profile, messages, reviews...
+      { path: 'profile',     element: <Profile /> },
+      // Future: messages, reviews...
     ],
   },
 
