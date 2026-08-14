@@ -12,6 +12,7 @@ export const ROUTES = {
   BROWSE: '/browse',
   DASHBOARD: '/dashboard',
   MY_SKILLS: '/dashboard/skills',
+  WALLET: '/dashboard/wallet',
   ABOUT: '/about',
   CONTACT: '/contact',
 };

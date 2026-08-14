@@ -20,6 +20,7 @@ import BrowseSkills from '../pages/BrowseSkills';
 import Dashboard from '../pages/Dashboard';
 import SkillPrices from '../pages/SkillPrices';
 import MySkills from '../pages/MySkills';
+import Wallet from '../pages/Wallet';
 import Requests from '../pages/Requests';
 import Transactions from '../pages/Transactions';
 import Profile from '../pages/Profile';
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'prices', element: <SkillPrices /> },
       { path: 'skills', element: <MySkills /> },
+      { path: 'wallet', element: <Wallet /> },
       { path: 'requests', element: <Requests /> },
       { path: 'transactions', element: <Transactions /> },
       { path: 'profile', element: <Profile /> },

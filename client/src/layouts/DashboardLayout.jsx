@@ -14,6 +14,7 @@ const SIDEBAR_LINKS = [
   { label: 'Market Prices',  to: `${ROUTES.DASHBOARD}/prices`, icon: 'MP' },
   { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`,  icon: 'PF' },
   { label: 'My Skills',      to: ROUTES.MY_SKILLS,             icon: 'MS' },
+  { label: 'Credit Wallet',  to: ROUTES.WALLET,                icon: 'CW' },
   { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
   { label: 'Transactions',   to: `${ROUTES.DASHBOARD}/transactions`, icon: 'TX' },
   { label: 'Messages',       to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },

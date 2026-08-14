@@ -13,7 +13,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import api from '../../services/api';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+import { formatCurrency, formatCredits, formatDate } from '../../utils/formatters';
 
 const EMPTY_FORM = { title: '', description: '', category: '', customCategoryName: '' };
 
@@ -388,9 +388,9 @@ const MySkills = () => {
 
                   <div>
                     <p className="text-sm text-steel-600">
-                      Live price:{' '}
+                      Live rate:{' '}
                       {listing.currentPriceBDT != null ? (
-                        <span className="font-semibold text-navy-900">{formatCurrency(listing.currentPriceBDT)}</span>
+                        <span className="font-semibold text-navy-900">{formatCredits(listing.currentPriceBDT)}</span>
                       ) : (
                         <span className="text-steel-400">not tracked yet</span>
                       )}
