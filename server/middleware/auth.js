@@ -7,7 +7,7 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const ApiError = require('../utils/ApiError');
-const config = require('../config/env');
+const { config } = require('../config/env');
 
 const base64UrlDecode = value => {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');

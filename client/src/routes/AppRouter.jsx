@@ -11,6 +11,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import MainLayout from '../layouts/MainLayout';
 import DashboardLayout from '../layouts/DashboardLayout';
+import ProtectedRoute from '../components/common/ProtectedRoute';
 
 import Home from '../pages/Home';
 import Login from '../pages/Login';
@@ -42,10 +43,13 @@ const router = createBrowserRouter([
   },
 
   // ─── Protected Routes (DashboardLayout) ──────────────────────────────────
-  // TODO: Wrap with <ProtectedRoute> when auth is implemented
   {
     path: '/dashboard',
-    element: <DashboardLayout />,
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'skills', element: <MySkills /> },
