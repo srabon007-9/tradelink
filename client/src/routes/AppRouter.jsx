@@ -53,6 +53,7 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
+      { path: 'browse', element: <BrowseSkills /> },
       { path: 'prices', element: <SkillPrices /> },
       { path: 'skills', element: <MySkills /> },
       { path: 'wallet', element: <Wallet /> },
