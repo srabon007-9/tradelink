@@ -13,6 +13,8 @@ import { useEffect, useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import useAuth from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import walletService from '../../services/wallet.service';
 import { formatDate } from '../../utils/formatters';
 
@@ -54,6 +56,9 @@ const TYPE_BADGES = {
 };
 
 const Wallet = () => {
+  const { refreshWalletBalance } = useAuth();
+  const { addToast } = useToast();
+
   const [summary, setSummary] = useState({
     balance: 0,
     totalPurchased: 0,
@@ -99,16 +104,15 @@ const Wallet = () => {
       const paymentId = `PAY-${Date.now().toString(36).toUpperCase()}`;
       await walletService.purchaseCredits(pkg.id, paymentId);
 
-      setMessage({
-        type: 'success',
-        text: `Successfully purchased ${pkg.credits} Credits for ৳${pkg.bdt}! An email notification has been dispatched.`,
-      });
+      const msg = `Successfully purchased ${pkg.credits} Credits for ৳${pkg.bdt}!`;
+      setMessage({ type: 'success', text: msg });
+      addToast(msg, 'success');
       await loadWalletData();
+      refreshWalletBalance();
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.message || 'Failed to complete credit purchase. Please try again.',
-      });
+      const msg = err.response?.data?.message || 'Failed to complete credit purchase. Please try again.';
+      setMessage({ type: 'error', text: msg });
+      addToast(msg, 'error');
     } finally {
       setPurchasingId(null);
     }
@@ -118,7 +122,9 @@ const Wallet = () => {
     setMessage({ type: '', text: '' });
     const amountNum = parseFloat(testAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setMessage({ type: 'error', text: 'Please enter a valid positive credit amount.' });
+      const errMsg = 'Please enter a valid positive credit amount.';
+      setMessage({ type: 'error', text: errMsg });
+      addToast(errMsg, 'error');
       return;
     }
 
@@ -134,16 +140,15 @@ const Wallet = () => {
       const finalReason = testReason.trim() || defaultReason;
 
       await walletService.devAction(actionType, amountNum, finalReason);
-      setMessage({
-        type: 'success',
-        text: `Action '${actionType}' recorded successfully! Wallet balance updated.`,
-      });
+      const msg = `Action '${actionType}' recorded successfully!`;
+      setMessage({ type: 'success', text: msg });
+      addToast(msg, 'success');
       await loadWalletData();
+      refreshWalletBalance();
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.message || `Failed to process ${actionType} action.`,
-      });
+      const msg = err.response?.data?.message || `Failed to process ${actionType} action.`;
+      setMessage({ type: 'error', text: msg });
+      addToast(msg, 'error');
     } finally {
       setTestingAction(false);
     }

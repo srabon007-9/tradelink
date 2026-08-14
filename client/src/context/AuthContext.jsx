@@ -1,10 +1,10 @@
 /**
  * context/AuthContext.jsx — Authentication Context
  *
- * Provides auth state and actions to the entire app.
+ * Provides auth state, user info, and live wallet balance to the entire app.
  */
 
-import { createContext, useState } from 'react';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 /** @type {React.Context<AuthContextValue>} */
@@ -12,7 +12,6 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Restore user from localStorage on page reload
     try {
       const stored = localStorage.getItem('tl_user');
       return stored ? JSON.parse(stored) : null;
@@ -20,12 +19,31 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
+
+  const [walletBalance, setWalletBalance] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Register a new user.
-   * @param {{ name, email, password, role? }} data
-   */
+  const refreshWalletBalance = useCallback(async () => {
+    if (!user) {
+      setWalletBalance(null);
+      return;
+    }
+    try {
+      const res = await api.get('/wallet');
+      setWalletBalance(res.data.data.balance);
+    } catch {
+      // ignore
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      refreshWalletBalance();
+    } else {
+      setWalletBalance(null);
+    }
+  }, [user, refreshWalletBalance]);
+
   const register = async data => {
     setIsLoading(true);
     try {
@@ -36,19 +54,13 @@ export const AuthProvider = ({ children }) => {
       setUser(newUser);
       return { success: true, user: newUser };
     } catch (err) {
-      const message =
-        err.response?.data?.message || 'Registration failed. Please try again.';
+      const message = err.response?.data?.message || 'Registration failed. Please try again.';
       return { success: false, message };
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Login an existing user.
-   * @param {string} email
-   * @param {string} password
-   */
   const login = async (email, password) => {
     setIsLoading(true);
     try {
@@ -59,8 +71,7 @@ export const AuthProvider = ({ children }) => {
       setUser(loggedInUser);
       return { success: true, user: loggedInUser };
     } catch (err) {
-      const message =
-        err.response?.data?.message || 'Login failed. Please try again.';
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
       return { success: false, message };
     } finally {
       setIsLoading(false);
@@ -76,6 +87,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('tl_user');
       localStorage.removeItem('tl_token');
       setUser(null);
+      setWalletBalance(null);
     }
   };
 
@@ -97,12 +109,14 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    walletBalance,
     isLoading,
     isLoggedIn: !!user,
     login,
     register,
     logout,
     updateProfile,
+    refreshWalletBalance,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

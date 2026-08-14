@@ -15,6 +15,8 @@ import Card from '../../components/ui/Card';
 import api from '../../services/api';
 import { formatCurrency, formatCredits, formatDate } from '../../utils/formatters';
 
+import { useToast } from '../../context/ToastContext';
+
 const EMPTY_FORM = { title: '', description: '', category: '', customCategoryName: '' };
 
 const CategorySelect = ({ id, categories, value, onChange }) => (
@@ -36,6 +38,7 @@ const StatusBadge = ({ status }) => (
 );
 
 const MySkills = () => {
+  const { addToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,9 +108,12 @@ const MySkills = () => {
       });
       setForm(EMPTY_FORM);
       setFormSuccess('Skill listing created.');
+      addToast('Skill listing created successfully!', 'success');
       loadAll();
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to create listing. Please try again.');
+      const msg = err.response?.data?.message || 'Failed to create listing. Please try again.';
+      setFormError(msg);
+      addToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -156,9 +162,12 @@ const MySkills = () => {
         customCategoryName: editForm.category === 'other' ? editForm.customCategoryName.trim() : undefined,
       });
       setEditingId(null);
+      addToast('Skill listing updated successfully!', 'success');
       loadAll();
     } catch (err) {
-      setRowError(err.response?.data?.message || 'Failed to update listing.');
+      const msg = err.response?.data?.message || 'Failed to update listing.';
+      setRowError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }
@@ -169,13 +178,17 @@ const MySkills = () => {
   const toggleStatus = async listing => {
     setRowError('');
     setBusyId(listing._id);
+    const nextStatus = listing.status === 'active' ? 'inactive' : 'active';
     try {
       await api.patch(`/skill-listings/${listing._id}`, {
-        status: listing.status === 'active' ? 'inactive' : 'active',
+        status: nextStatus,
       });
+      addToast(`Listing status updated to ${nextStatus}`, 'info');
       loadAll();
     } catch (err) {
-      setRowError(err.response?.data?.message || 'Failed to update listing status.');
+      const msg = err.response?.data?.message || 'Failed to update listing status.';
+      setRowError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }
@@ -188,9 +201,12 @@ const MySkills = () => {
     setBusyId(listing._id);
     try {
       await api.delete(`/skill-listings/${listing._id}`);
+      addToast('Listing deleted successfully', 'info');
       loadAll();
     } catch (err) {
-      setRowError(err.response?.data?.message || 'Failed to delete listing.');
+      const msg = err.response?.data?.message || 'Failed to delete listing.';
+      setRowError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }

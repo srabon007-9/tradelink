@@ -4,12 +4,6 @@
  * Browse all skill categories with their current live price (from the
  * Dynamic Valuation Engine), and filter/sort the active skill listings
  * (see Skill Listing Profiles) by category, live price, or search text.
- * Every listing shown here is, by definition, currently available — the
- * feed only ever includes active listings.
- *
- * Each listing shows its provider's details, and "Book Session" opens a
- * Trade Proposal — see pages/Requests for accepting/declining/tracking
- * proposals once sent.
  */
 
 import { useEffect, useState } from 'react';
@@ -18,9 +12,11 @@ import PageHeader from '../../components/layout/PageHeader';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import { CardSkeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import { ROUTES } from '../../constants';
 import { formatCredits, truncate } from '../../utils/formatters';
 
@@ -63,49 +59,58 @@ const CategoryChip = ({ active, label, price, count, onClick }) => (
 );
 
 const BrowseSkills = () => {
-  const { user, isLoggedIn } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { isLoggedIn, user } = useAuth();
+  const { addToast } = useToast();
 
+  const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState('newest');
+
+  const [listings, setListings] = useState([]);
+  const [totalListings, setTotalListings] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const [bookingOpenId, setBookingOpenId] = useState(null);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
-  const [bookedIds, setBookedIds] = useState(() => new Set());
+  const [bookedIds, setBookedIds] = useState(new Set());
 
-  // Debounce free-text search so we're not firing a request per keystroke.
   useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
-    return () => clearTimeout(t);
+    api.get('/valuations')
+      .then(res => setCategories(res.data.data))
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   useEffect(() => {
     setLoading(true);
-    api
-      .get('/browse', { params: { category: category || undefined, search: search || undefined, sort } })
-      .then(res => {
-        setCategories(res.data.data.categories);
-        setListings(res.data.data.listings);
-      })
-      .catch(() => {
-        setCategories([]);
-        setListings([]);
-      })
-      .finally(() => setLoading(false));
-  }, [category, search, sort]);
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (searchQuery) params.append('q', searchQuery);
+    if (sort) params.append('sort', sort);
 
-  const totalListings = categories.reduce((sum, c) => sum + c.listingCount, 0);
+    api.get(`/browse?${params.toString()}`)
+      .then(res => {
+        setListings(res.data.data.listings);
+        setTotalListings(res.data.data.totalListings);
+      })
+      .catch(() => setListings([]))
+      .finally(() => setLoading(false));
+  }, [category, searchQuery, sort]);
 
   const openBooking = listingId => {
     setBookingOpenId(listingId);
-    setBookingDate('');
+    setBookingDate(MIN_SESSION_DATETIME);
     setBookingMessage('');
     setBookingError('');
   };
@@ -131,11 +136,22 @@ const BrowseSkills = () => {
       });
       setBookedIds(prev => new Set(prev).add(listingId));
       setBookingOpenId(null);
+      addToast('Trade proposal sent successfully!', 'success');
     } catch (err) {
-      setBookingError(err.response?.data?.message || 'Failed to send the proposal. Please try again.');
+      const msg = err.response?.data?.message || 'Failed to send the proposal. Please try again.';
+      setBookingError(msg);
+      addToast(msg, 'error');
     } finally {
       setBookingSubmitting(false);
     }
+  };
+
+  const hasActiveFilters = category !== '' || searchInput.trim() !== '';
+
+  const clearFilters = () => {
+    setCategory('');
+    setSearchInput('');
+    setSort('newest');
   };
 
   return (
@@ -143,10 +159,10 @@ const BrowseSkills = () => {
       <PageHeader
         eyebrow="Category Browsing"
         title="Browse Skills & Live Prices"
-        subtitle="Every category's price adjusts live with supply and demand. Only currently available listings are shown."
+        description="Filter active skill listings by category, live Dynamic Valuation price, or keyword."
       />
 
-      <div className="container-xl py-12">
+      <div className="container-xl pb-16">
         {/* ── Category Chips ────────────────────────────────────────────── */}
         <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
           <CategoryChip
@@ -169,11 +185,11 @@ const BrowseSkills = () => {
         </div>
 
         {/* ── Search + Sort Controls ───────────────────────────────────── */}
-        <div className="surface-card mb-8 grid gap-3 p-4 lg:grid-cols-[1fr_220px]">
+        <div className="surface-card mb-8 grid gap-3 p-4 lg:grid-cols-[1fr_220px_auto]">
           <input
             id="browse-search"
             type="search"
-            placeholder="Search listings by title or description"
+            placeholder="Search listings by title or description..."
             className="input-base"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
@@ -190,21 +206,41 @@ const BrowseSkills = () => {
               </option>
             ))}
           </select>
+
+          {hasActiveFilters && (
+            <Button variant="ghost" onClick={clearFilters} className="text-xs">
+              Clear Filters ✕
+            </Button>
+          )}
         </div>
 
-        <p className="mb-5 text-sm text-steel-600">
-          {loading ? 'Loading…' : (
-            <>Showing <span className="font-semibold text-slate-950">{listings.length}</span> available listing{listings.length !== 1 ? 's' : ''}</>
-          )}
+        <p className="mb-5 text-sm text-steel-600 flex items-center justify-between">
+          <span>
+            {loading ? 'Searching listings…' : (
+              <>Showing <span className="font-semibold text-slate-950">{listings.length}</span> available listing{listings.length !== 1 ? 's' : ''}</>
+            )}
+          </span>
         </p>
 
         {/* ── Listings ──────────────────────────────────────────────────── */}
         {loading ? (
-          <div className="flex justify-center py-16 text-sm text-steel-600">Loading listings…</div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
         ) : listings.length === 0 ? (
           <div className="rounded-lg border border-concrete-200 bg-concrete-50 py-16 text-center">
             <p className="text-base font-semibold text-slate-950">No listings match your filters</p>
-            <p className="mt-2 text-sm text-steel-600">Try a different category, search term, or check back later.</p>
+            <p className="mt-2 text-sm text-steel-600">Try a different category, search term, or clear your filters.</p>
+            {hasActiveFilters && (
+              <Button size="sm" variant="outline" className="mt-4" onClick={clearFilters}>
+                Reset Search Filters
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -215,9 +251,13 @@ const BrowseSkills = () => {
               const isFormOpen = bookingOpenId === listing._id;
 
               return (
-                <article key={listing._id} className="surface-card flex flex-col p-5">
+                <article key={listing._id} className="surface-card flex flex-col p-5 relative">
                   <div className="flex items-start justify-between gap-2">
-                    <Badge color="gray">{listing.categoryName}</Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge color="gray">{listing.categoryName}</Badge>
+                      {isOwnListing && <Badge color="primary">Your Listing</Badge>}
+                    </div>
+
                     {isPriced ? (
                       <span className="text-lg font-bold text-navy-900">{formatCredits(listing.currentPriceBDT)}</span>
                     ) : (

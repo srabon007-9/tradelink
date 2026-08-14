@@ -9,7 +9,7 @@ import { NAV_LINKS, ROUTES } from '../../constants';
 import useAuth from '../../hooks/useAuth';
 
 const Navbar = () => {
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, logout, walletBalance } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen]   = useState(false);
   const [isScrolled, setIsScrolled]   = useState(false);
@@ -65,14 +65,23 @@ const Navbar = () => {
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <button
-                id="navbar-logout-btn"
-                type="button"
-                onClick={handleLogout}
-                className="px-4 py-2 rounded-md border border-concrete-300 text-sm font-semibold text-steel-700 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors duration-150"
-              >
-                Log Out
-              </button>
+              <>
+                <Link
+                  to={ROUTES.WALLET}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-navy-800 bg-navy-50 text-xs font-bold text-navy-900 hover:bg-navy-100 transition-colors"
+                >
+                  <span>💳</span>
+                  <span>{walletBalance !== null ? `${walletBalance} Credits` : '…'}</span>
+                </Link>
+                <button
+                  id="navbar-logout-btn"
+                  type="button"
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-md border border-concrete-300 text-sm font-semibold text-steel-700 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors duration-150"
+                >
+                  Log Out
+                </button>
+              </>
             ) : (
               <>
                 <Link
