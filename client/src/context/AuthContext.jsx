@@ -79,6 +79,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async profileData => {
+    setIsLoading(true);
+    try {
+      const res = await api.patch('/users/profile', profileData);
+      const updatedUser = res.data.data;
+      localStorage.setItem('tl_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to update profile.';
+      return { success: false, message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     isLoading,
@@ -86,6 +102,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
