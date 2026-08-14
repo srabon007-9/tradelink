@@ -18,11 +18,11 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import BrowseSkills from '../pages/BrowseSkills';
 import Dashboard from '../pages/Dashboard';
-import MySkills from '../pages/MySkills';
-import CreateSkill from '../pages/CreateSkill';
-import EditSkill from '../pages/EditSkill';
-import SkillDetails from '../pages/SkillDetails';
 import SkillPrices from '../pages/SkillPrices';
+import MySkills from '../pages/MySkills';
+import Requests from '../pages/Requests';
+import Transactions from '../pages/Transactions';
+import Profile from '../pages/Profile';
 import About from '../pages/About';
 import Contact from '../pages/Contact';
 import NotFound from '../pages/NotFound';
@@ -33,12 +33,12 @@ const router = createBrowserRouter([
     path: '/',
     element: <MainLayout />,
     children: [
-      { index: true,        element: <Home /> },
-      { path: 'login',      element: <Login /> },
-      { path: 'register',   element: <Register /> },
-      { path: 'browse',     element: <BrowseSkills /> },
-      { path: 'about',      element: <About /> },
-      { path: 'contact',    element: <Contact /> },
+      { index: true, element: <Home /> },
+      { path: 'login', element: <Login /> },
+      { path: 'register', element: <Register /> },
+      { path: 'browse', element: <BrowseSkills /> },
+      { path: 'about', element: <About /> },
+      { path: 'contact', element: <Contact /> },
     ],
   },
 
@@ -52,12 +52,11 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
-      { path: 'skills', element: <MySkills /> },
-      { path: 'skills/new', element: <CreateSkill /> },
-      { path: 'skills/:id', element: <SkillDetails /> },
-      { path: 'skills/:id/edit', element: <EditSkill /> },
       { path: 'prices', element: <SkillPrices /> },
-      // Future: profile, requests, messages, reviews...
+      { path: 'skills', element: <MySkills /> },
+      { path: 'requests', element: <Requests /> },
+      { path: 'transactions', element: <Transactions /> },
+      { path: 'profile', element: <Profile /> },
     ],
   },
 

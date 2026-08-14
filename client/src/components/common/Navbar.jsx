@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import Logo from './Logo';
 import { NAV_LINKS, ROUTES } from '../../constants';
+import useAuth from '../../hooks/useAuth';
 
 const Navbar = () => {
+  const { isLoggedIn } = useAuth();
   const [isMenuOpen, setIsMenuOpen]   = useState(false);
   const [isScrolled, setIsScrolled]   = useState(false);
 
@@ -55,18 +57,26 @@ const Navbar = () => {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              to={ROUTES.LOGIN}
-              className="px-4 py-2 rounded-md text-sm font-semibold text-steel-700 hover:text-navy-900 transition-colors duration-150"
-            >
-              Member Login
-            </Link>
-            <Link
-              to={ROUTES.REGISTER}
-              className="btn-primary"
-            >
-              Join TradeLink
-            </Link>
+            {isLoggedIn ? (
+              <Link to={ROUTES.DASHBOARD} className="btn-primary">
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to={ROUTES.LOGIN}
+                  className="px-4 py-2 rounded-md text-sm font-semibold text-steel-700 hover:text-navy-900 transition-colors duration-150"
+                >
+                  Member Login
+                </Link>
+                <Link
+                  to={ROUTES.REGISTER}
+                  className="btn-primary"
+                >
+                  Join TradeLink
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger */}
@@ -109,20 +119,32 @@ const Navbar = () => {
               </NavLink>
             ))}
             <div className="border-t border-concrete-200 pt-3 mt-1 flex flex-col gap-2">
-              <Link
-                to={ROUTES.LOGIN}
-                onClick={closeMenu}
-                className="px-4 py-3 rounded-md text-sm font-semibold text-steel-700 hover:text-navy-900 hover:bg-concrete-50 transition-colors text-center"
-              >
-                Member Login
-              </Link>
-              <Link
-                to={ROUTES.REGISTER}
-                onClick={closeMenu}
-                className="btn-primary text-center"
-              >
-                Join TradeLink
-              </Link>
+              {isLoggedIn ? (
+                <Link
+                  to={ROUTES.DASHBOARD}
+                  onClick={closeMenu}
+                  className="btn-primary text-center"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to={ROUTES.LOGIN}
+                    onClick={closeMenu}
+                    className="px-4 py-3 rounded-md text-sm font-semibold text-steel-700 hover:text-navy-900 hover:bg-concrete-50 transition-colors text-center"
+                  >
+                    Member Login
+                  </Link>
+                  <Link
+                    to={ROUTES.REGISTER}
+                    onClick={closeMenu}
+                    className="btn-primary text-center"
+                  >
+                    Join TradeLink
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

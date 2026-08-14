@@ -3,8 +3,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '../../constants';
 import api from '../../services/api';
 
 const HeroSection = () => {
@@ -34,15 +32,6 @@ const HeroSection = () => {
           <p className="mt-5 max-w-2xl text-base leading-7 text-steel-600">
             TradeLink is a skill-barter marketplace where people exchange services using a dynamic credit system — priced by real supply and demand, not self-declared rates.
           </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link id="hero-cta-register" to={ROUTES.REGISTER} className="btn-primary">
-              Create Member Account
-            </Link>
-            <Link id="hero-cta-browse" to={ROUTES.BROWSE} className="btn-ghost">
-              Browse Members
-            </Link>
-          </div>
 
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {STATS.map(stat => (

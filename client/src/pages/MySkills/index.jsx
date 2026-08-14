@@ -1,223 +1,421 @@
 /**
- * pages/MySkills/index.jsx — Member skill listing dashboard.
+ * pages/MySkills/index.jsx — Skill Listing Profiles (manage my listings)
+ *
+ * Lets a member create and manage the skills they offer: title,
+ * description, and a category (one of the seeded valuation-engine
+ * categories, or a free-text "Other"). There's no price field — cost is
+ * never user-set, it's always the category's live price from the Dynamic
+ * Valuation Engine.
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { ROUTES, SKILL_CATEGORIES, SKILL_STATUSES } from '../../constants';
-import { skillService } from '../../services/skill.service';
+import Card from '../../components/ui/Card';
+import api from '../../services/api';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'oldest', label: 'Oldest' },
-  { value: 'alphabetical', label: 'Alphabetical' },
-  { value: 'baseRate', label: 'Base Rate' },
-];
+const EMPTY_FORM = { title: '', description: '', category: '', customCategoryName: '' };
 
-const formatCurrency = value =>
-  new Intl.NumberFormat('en-BD', {
-    style: 'currency',
-    currency: 'BDT',
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+const CategorySelect = ({ id, categories, value, onChange }) => (
+  <select id={id} name="category" className="input-base" value={value} onChange={onChange} required>
+    <option value="" disabled>
+      Select a category…
+    </option>
+    {categories.map(cat => (
+      <option key={cat.slug} value={cat.slug}>
+        {cat.name}
+      </option>
+    ))}
+    <option value="other">Other (not listed)</option>
+  </select>
+);
 
-const formatDate = value =>
-  value
-    ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value))
-    : 'Not available';
-
-const statusColor = status => {
-  if (status === 'active') {
-    return 'green';
-  }
-  if (status === 'paused') {
-    return 'yellow';
-  }
-  return 'gray';
-};
+const StatusBadge = ({ status }) => (
+  <Badge color={status === 'active' ? 'green' : 'gray'}>{status === 'active' ? 'Active' : 'Inactive'}</Badge>
+);
 
 const MySkills = () => {
-  const [skills, setSkills] = useState([]);
-  const [filters, setFilters] = useState({ search: '', category: '', status: '', sort: 'newest' });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [busyId, setBusyId] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const query = useMemo(
-    () => Object.fromEntries(Object.entries(filters).filter(([, value]) => value)),
-    [filters]
-  );
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [rowError, setRowError] = useState('');
+  const [busyId, setBusyId] = useState(null);
+
+  const loadAll = () => {
+    setLoading(true);
+    Promise.all([api.get('/valuations'), api.get('/skill-listings/mine')])
+      .then(([catRes, listingRes]) => {
+        setCategories(catRes.data.data);
+        setListings(listingRes.data.data);
+      })
+      .catch(() => {
+        setCategories([]);
+        setListings([]);
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    let isCurrent = true;
-    setIsLoading(true);
-    setError('');
+    loadAll();
+  }, []);
 
-    skillService
-      .listMine(query)
-      .then(data => {
-        if (isCurrent) {
-          setSkills(data);
-        }
-      })
-      .catch(apiError => {
-        if (isCurrent) {
-          setError(apiError.response?.data?.message || 'Unable to load skill listings.');
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [query]);
-
-  const updateFilter = event => {
-    const { name, value } = event.target;
-    setFilters(current => ({ ...current, [name]: value }));
+  const categoryName = slug => {
+    if (slug === 'other') return 'Other';
+    return categories.find(c => c.slug === slug)?.name || slug;
   };
 
-  const updateStatus = async (skill, status) => {
-    setBusyId(skill._id);
-    setNotice('');
-    try {
-      const updatedSkill = await skillService.updateStatus(skill._id, status);
-      setSkills(current => current.map(item => (item._id === updatedSkill._id ? updatedSkill : item)));
-      setNotice(`"${updatedSkill.title}" is now ${updatedSkill.status}.`);
-    } catch (apiError) {
-      setError(apiError.response?.data?.message || 'Unable to update listing status.');
-    } finally {
-      setBusyId('');
+  // ─── Create ───────────────────────────────────────────────────────────────
+
+  const handleFormChange = e => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    setFormError('');
+  };
+
+  const handleCreateSubmit = async e => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess('');
+
+    if (!form.title.trim() || !form.description.trim() || !form.category) {
+      setFormError('Title, description and category are required.');
+      return;
     }
-  };
-
-  const deleteSkill = async skill => {
-    const confirmed = window.confirm(`Delete "${skill.title}"? This cannot be undone.`);
-    if (!confirmed) {
+    if (form.category === 'other' && !form.customCategoryName.trim()) {
+      setFormError("Please name the skill category since it isn't in the list.");
       return;
     }
 
-    setBusyId(skill._id);
-    setNotice('');
+    setSubmitting(true);
     try {
-      await skillService.remove(skill._id);
-      setSkills(current => current.filter(item => item._id !== skill._id));
-      setNotice(`"${skill.title}" was deleted.`);
-    } catch (apiError) {
-      setError(apiError.response?.data?.message || 'Unable to delete skill listing.');
+      await api.post('/skill-listings', {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        category: form.category,
+        customCategoryName: form.category === 'other' ? form.customCategoryName.trim() : undefined,
+      });
+      setForm(EMPTY_FORM);
+      setFormSuccess('Skill listing created.');
+      loadAll();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to create listing. Please try again.');
     } finally {
-      setBusyId('');
+      setSubmitting(false);
+    }
+  };
+
+  // ─── Edit ─────────────────────────────────────────────────────────────────
+
+  const startEdit = listing => {
+    setEditingId(listing._id);
+    setRowError('');
+    setEditForm({
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      customCategoryName: listing.customCategoryName || '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setRowError('');
+  };
+
+  const handleEditChange = e => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const saveEdit = async id => {
+    setRowError('');
+    if (!editForm.title.trim() || !editForm.description.trim() || !editForm.category) {
+      setRowError('Title, description and category are required.');
+      return;
+    }
+    if (editForm.category === 'other' && !editForm.customCategoryName.trim()) {
+      setRowError("Please name the skill category since it isn't in the list.");
+      return;
+    }
+
+    setBusyId(id);
+    try {
+      await api.patch(`/skill-listings/${id}`, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim(),
+        category: editForm.category,
+        customCategoryName: editForm.category === 'other' ? editForm.customCategoryName.trim() : undefined,
+      });
+      setEditingId(null);
+      loadAll();
+    } catch (err) {
+      setRowError(err.response?.data?.message || 'Failed to update listing.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // ─── Status toggle / delete ─────────────────────────────────────────────
+
+  const toggleStatus = async listing => {
+    setRowError('');
+    setBusyId(listing._id);
+    try {
+      await api.patch(`/skill-listings/${listing._id}`, {
+        status: listing.status === 'active' ? 'inactive' : 'active',
+      });
+      loadAll();
+    } catch (err) {
+      setRowError(err.response?.data?.message || 'Failed to update listing status.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const deleteListing = async listing => {
+    if (!window.confirm(`Delete "${listing.title}"? This can't be undone.`)) return;
+
+    setRowError('');
+    setBusyId(listing._id);
+    try {
+      await api.delete(`/skill-listings/${listing._id}`);
+      loadAll();
+    } catch (err) {
+      setRowError(err.response?.data?.message || 'Failed to delete listing.');
+    } finally {
+      setBusyId(null);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <span className="eyebrow mb-2">Skill Listings</span>
-          <h1 className="text-3xl font-semibold text-slate-950">My Skills</h1>
-          <p className="mt-2 max-w-2xl text-sm text-steel-600">
-            Manage service listings, availability, and pricing inputs for future valuation workflows.
-          </p>
-        </div>
-        <Link to={`${ROUTES.MY_SKILLS}/new`} className="btn-primary">
-          Create Skill
-        </Link>
+      <div>
+        <span className="eyebrow mb-2">Skill Listing Profiles</span>
+        <h1 className="text-3xl font-semibold text-slate-950">My Skills</h1>
+        <p className="mt-2 text-sm text-steel-600">
+          List the skills you offer. Prices shown live are set by the Dynamic Valuation Engine based on
+          current supply and demand for each category.
+        </p>
       </div>
 
-      {notice && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          {notice}
+      {/* ── Create Form ─────────────────────────────────────────────── */}
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-slate-950">Add a new skill</h2>
+
+        {formError && (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {formError}
+          </div>
+        )}
+        {formSuccess && (
+          <div className="mt-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {formSuccess}
+          </div>
+        )}
+
+        <form className="mt-4 space-y-4" onSubmit={handleCreateSubmit}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="listing-title" className="mb-1.5 block text-sm font-medium text-steel-700">
+                Title
+              </label>
+              <input
+                id="listing-title"
+                name="title"
+                type="text"
+                placeholder="e.g. Algebra Tutoring"
+                className="input-base"
+                value={form.title}
+                onChange={handleFormChange}
+                maxLength={100}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="listing-category" className="mb-1.5 block text-sm font-medium text-steel-700">
+                Category
+              </label>
+              <CategorySelect
+                id="listing-category"
+                categories={categories}
+                value={form.category}
+                onChange={handleFormChange}
+              />
+            </div>
+          </div>
+
+          {form.category === 'other' && (
+            <div>
+              <label htmlFor="listing-custom-category" className="mb-1.5 block text-sm font-medium text-steel-700">
+                Skill name (since it isn't in the list)
+              </label>
+              <input
+                id="listing-custom-category"
+                name="customCategoryName"
+                type="text"
+                placeholder="e.g. Falconry"
+                className="input-base"
+                value={form.customCategoryName}
+                onChange={handleFormChange}
+                maxLength={100}
+                required
+              />
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="listing-description" className="mb-1.5 block text-sm font-medium text-steel-700">
+              Description
+            </label>
+            <textarea
+              id="listing-description"
+              name="description"
+              rows={3}
+              placeholder="What do you offer? Any relevant experience?"
+              className="input-base"
+              value={form.description}
+              onChange={handleFormChange}
+              maxLength={1000}
+              required
+            />
+          </div>
+
+          <Button id="listing-submit-btn" type="submit" disabled={submitting}>
+            {submitting ? 'Adding…' : 'Add Skill Listing'}
+          </Button>
+        </form>
+      </Card>
+
+      {/* ── Listings ─────────────────────────────────────────────────── */}
+      <section className="surface-card overflow-hidden">
+        <div className="border-b border-concrete-200 px-5 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Your Listings</h2>
+          <p className="mt-1 text-sm text-steel-600">Active listings count as supply in the valuation engine.</p>
         </div>
-      )}
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
-          {error}
-        </div>
-      )}
+        {rowError && (
+          <div className="mx-5 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {rowError}
+          </div>
+        )}
 
-      <section className="surface-card grid gap-3 p-4 lg:grid-cols-[1fr_220px_180px_180px]">
-        <input name="search" value={filters.search} onChange={updateFilter} type="search" placeholder="Search listings" className="input-base" />
-        <select name="category" value={filters.category} onChange={updateFilter} className="input-base cursor-pointer">
-          <option value="">All categories</option>
-          {SKILL_CATEGORIES.map(category => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
-        <select name="status" value={filters.status} onChange={updateFilter} className="input-base cursor-pointer">
-          <option value="">All statuses</option>
-          {SKILL_STATUSES.map(status => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-        <select name="sort" value={filters.sort} onChange={updateFilter} className="input-base cursor-pointer">
-          {SORT_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-      </section>
-
-      <section className="table-shell">
-        <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.8fr_1.2fr] gap-4 border-b border-concrete-200 bg-concrete-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-steel-600 xl:grid">
-          <span>Skill</span>
-          <span>Category</span>
-          <span>Base Rate</span>
-          <span>Experience</span>
-          <span>Status</span>
-          <span>Actions</span>
-        </div>
-
-        {isLoading ? (
-          <div className="px-5 py-12 text-center text-sm font-medium text-steel-600">Loading skill listings...</div>
-        ) : skills.length === 0 ? (
-          <div className="px-5 py-14 text-center">
-            <h2 className="text-lg font-semibold text-slate-950">No skill listings yet</h2>
-            <p className="mt-2 text-sm text-steel-600">Create your first listing to start building your TradeLink profile.</p>
-            <Link to={`${ROUTES.MY_SKILLS}/new`} className="btn-primary mt-5">
-              Create Skill
-            </Link>
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-sm text-steel-500">Loading listings…</div>
+        ) : listings.length === 0 ? (
+          <div className="py-16 text-center text-sm text-steel-500">
+            You haven't listed any skills yet — add one above.
           </div>
         ) : (
           <div className="divide-y divide-concrete-200">
-            {skills.map(skill => (
-              <article key={skill._id} className="grid gap-4 px-5 py-5 xl:grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.8fr_1.2fr] xl:items-center">
-                <div className="flex items-center gap-3">
-                  <div className="h-14 w-20 flex-shrink-0 overflow-hidden rounded-md border border-concrete-200 bg-concrete-50">
-                    {skill.thumbnail ? (
-                      <img src={skill.thumbnail} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-steel-600">TL</div>
+            {listings.map(listing => {
+              const isEditing = editingId === listing._id;
+              const isBusy = busyId === listing._id;
+
+              if (isEditing) {
+                return (
+                  <div key={listing._id} className="space-y-4 px-5 py-5">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <input
+                        name="title"
+                        type="text"
+                        className="input-base"
+                        value={editForm.title}
+                        onChange={handleEditChange}
+                        maxLength={100}
+                      />
+                      <CategorySelect
+                        id={`edit-category-${listing._id}`}
+                        categories={categories}
+                        value={editForm.category}
+                        onChange={handleEditChange}
+                      />
+                    </div>
+                    {editForm.category === 'other' && (
+                      <input
+                        name="customCategoryName"
+                        type="text"
+                        placeholder="Skill name"
+                        className="input-base"
+                        value={editForm.customCategoryName}
+                        onChange={handleEditChange}
+                        maxLength={100}
+                      />
                     )}
+                    <textarea
+                      name="description"
+                      rows={3}
+                      className="input-base"
+                      value={editForm.description}
+                      onChange={handleEditChange}
+                      maxLength={1000}
+                    />
+                    <div className="flex gap-3">
+                      <Button size="sm" disabled={isBusy} onClick={() => saveEdit(listing._id)}>
+                        {isBusy ? 'Saving…' : 'Save'}
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={isBusy} onClick={cancelEdit}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h2 className="truncate font-semibold text-slate-950">{skill.title}</h2>
-                    <p className="mt-1 text-xs text-steel-600">Created {formatDate(skill.createdAt)}</p>
+                );
+              }
+
+              return (
+                <div
+                  key={listing._id}
+                  className="grid gap-4 px-5 py-4 md:grid-cols-[1.6fr_1fr_auto] md:items-center"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-slate-950">{listing.title}</p>
+                      <StatusBadge status={listing.status} />
+                      <Badge color="gray">{categoryName(listing.category)}</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-steel-600 line-clamp-2">{listing.description}</p>
+                    <p className="mt-1 text-xs text-steel-400">Listed {formatDate(listing.createdAt)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-steel-600">
+                      Live price:{' '}
+                      {listing.currentPriceBDT != null ? (
+                        <span className="font-semibold text-navy-900">{formatCurrency(listing.currentPriceBDT)}</span>
+                      ) : (
+                        <span className="text-steel-400">not tracked yet</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-xs text-steel-400">
+                      {listing.currentPriceBDT != null
+                        ? 'Set by the Dynamic Valuation Engine'
+                        : "This category isn't priced by the valuation engine"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    <Button size="sm" variant="outline" disabled={isBusy} onClick={() => startEdit(listing)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={isBusy} onClick={() => toggleStatus(listing)}>
+                      {listing.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                    <Button size="sm" variant="danger" disabled={isBusy} onClick={() => deleteListing(listing)}>
+                      Delete
+                    </Button>
                   </div>
                 </div>
-                <span className="text-sm text-steel-700">{skill.category}</span>
-                <span className="text-sm font-semibold text-slate-950">{formatCurrency(skill.baseRate)}</span>
-                <span className="text-sm text-steel-700">{skill.experienceLevel}</span>
-                <Badge color={statusColor(skill.status)}>{skill.status}</Badge>
-                <div className="flex flex-wrap gap-2">
-                  <Link to={`${ROUTES.MY_SKILLS}/${skill._id}`} className="btn-ghost px-3 py-2 text-xs">View</Link>
-                  <Link to={`${ROUTES.MY_SKILLS}/${skill._id}/edit`} className="btn-ghost px-3 py-2 text-xs">Edit</Link>
-                  {skill.status === 'active' ? (
-                    <Button type="button" size="sm" variant="outline" isLoading={busyId === skill._id} onClick={() => updateStatus(skill, 'paused')}>Pause</Button>
-                  ) : (
-                    <Button type="button" size="sm" variant="outline" isLoading={busyId === skill._id} onClick={() => updateStatus(skill, 'active')}>Resume</Button>
-                  )}
-                  <Button type="button" size="sm" variant="danger" isLoading={busyId === skill._id} onClick={() => deleteSkill(skill)}>Delete</Button>
-                </div>
-              </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

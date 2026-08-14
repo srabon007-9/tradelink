@@ -23,12 +23,12 @@ const authController = {
    */
   register: async (req, res, next) => {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, password, phone } = req.body;
       const { user, accessToken, refreshToken } = await authService.registerUser({
         name,
         email,
         password,
-        role,
+        phone,
       });
 
       // Store refresh token in httpOnly cookie

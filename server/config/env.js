@@ -53,6 +53,17 @@ const config = {
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
 
+  // Optional — Trade Proposal session scheduling degrades gracefully
+  // (calendarSynced: false) when these aren't set. See
+  // services/googleCalendar.service.js.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob',
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+  },
+
   smtp: {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10) || 587,

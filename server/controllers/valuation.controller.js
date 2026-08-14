@@ -16,7 +16,7 @@ const valuationController = {
   getAllCategories: async (req, res, next) => {
     try {
       const categories = await SkillCategory.find()
-        .sort({ creditValue: -1 })
+        .sort({ priceBDT: -1 })
         .lean();
 
       return res.status(200).json({
@@ -57,7 +57,7 @@ const valuationController = {
   recalculateAll: async (req, res, next) => {
     try {
       await valuationService.recalculateAll('manual');
-      const categories = await SkillCategory.find().sort({ creditValue: -1 }).lean();
+      const categories = await SkillCategory.find().sort({ priceBDT: -1 }).lean();
 
       return res.status(200).json({
         success: true,
