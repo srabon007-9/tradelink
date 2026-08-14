@@ -9,6 +9,7 @@ import { ROUTES } from '../constants';
 import useAuth from '../hooks/useAuth';
 
 const SIDEBAR_LINKS = [
+  { label: 'Home Page',      to: ROUTES.HOME,                  icon: 'HM' },
   { label: 'Overview',       to: ROUTES.DASHBOARD,             icon: 'OV' },
   { label: 'My Skills',      to: ROUTES.MY_SKILLS,             icon: 'MS' },
   { label: 'Credit Wallet',  to: ROUTES.WALLET,                icon: 'CW' },
@@ -29,8 +30,11 @@ const DashboardLayout = () => {
   return (
   <div className="min-h-screen bg-page lg:flex">
     <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-concrete-200 bg-white">
-      <div className="border-b border-concrete-200 p-5">
+      <div className="border-b border-concrete-200 p-5 flex items-center justify-between">
         <Logo />
+        <NavLink to={ROUTES.HOME} className="text-xs font-semibold text-steel-600 hover:text-navy-900">
+          ← Home
+        </NavLink>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Dashboard navigation">
@@ -79,14 +83,22 @@ const DashboardLayout = () => {
     <div className="min-h-screen flex-1 lg:ml-64">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-concrete-200 bg-white px-4 py-4 lg:hidden">
         <Logo />
+        <div className="flex items-center gap-2">
+          <NavLink
+            to={ROUTES.HOME}
+            className="rounded-md border border-concrete-300 px-3 py-2 text-xs font-semibold text-steel-700 hover:bg-concrete-50"
+          >
+            Home
+          </NavLink>
           <button
             id="dashboard-mobile-logout-btn"
             type="button"
             onClick={handleLogout}
-            className="rounded-md border border-concrete-300 px-3 py-2 text-sm font-semibold text-steel-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors duration-150"
+            className="rounded-md border border-concrete-300 px-3 py-2 text-xs font-semibold text-steel-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors duration-150"
           >
             Log Out
           </button>
+        </div>
       </header>
 
       <main className="p-4 sm:p-6 lg:p-8">
