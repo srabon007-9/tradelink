@@ -189,7 +189,6 @@ const BrowseSkills = () => {
                 Sort: {opt.label}
               </option>
             ))}
-            ))}
           </select>
         </div>
 
