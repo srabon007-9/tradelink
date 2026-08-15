@@ -1,9 +1,12 @@
 /**
- * pages/BrowseSkills/index.jsx — Category Browsing With Live Price Filtering
+ * pages/BrowseSkills/index.jsx — Category Browsing With Live Price Filtering & Credit Wallet Discounts
  *
  * Browse all skill categories with their current live price (from the
  * Dynamic Valuation Engine), and filter/sort the active skill listings
  * (see Skill Listing Profiles) by category, live price, or search text.
+ *
+ * The booking form also lets a logged-in requester redeem Credit Wallet
+ * credits for a live-previewed discount before sending the trade proposal.
  */
 
 import { useEffect, useState } from 'react';
@@ -77,15 +80,26 @@ const BrowseSkills = () => {
   const [bookingOpenId, setBookingOpenId] = useState(null);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingCredits, setBookingCredits] = useState('');
+  const [bookingPreview, setBookingPreview] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookedIds, setBookedIds] = useState(new Set());
+  const [walletBalance, setWalletBalance] = useState(null);
 
   useEffect(() => {
     api.get('/valuations')
       .then(res => setCategories(res.data.data))
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    api
+      .get('/wallet/mine')
+      .then(res => setWalletBalance(res.data.data.balance))
+      .catch(() => setWalletBalance(null));
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,10 +124,33 @@ const BrowseSkills = () => {
       .finally(() => setLoading(false));
   }, [category, searchQuery, sort]);
 
+  // Live discount preview for whichever booking form is open, debounced.
+  useEffect(() => {
+    if (!bookingOpenId) {
+      setBookingPreview(null);
+      return undefined;
+    }
+    const listing = listings.find(l => l._id === bookingOpenId);
+    if (!listing || listing.currentPriceBDT == null) return undefined;
+
+    const timer = setTimeout(() => {
+      api
+        .get('/wallet/preview-redemption', {
+          params: { price: listing.currentPriceBDT, credits: Number(bookingCredits) || 0 },
+        })
+        .then(res => setBookingPreview(res.data.data))
+        .catch(() => setBookingPreview(null));
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [bookingOpenId, bookingCredits, listings]);
+
   const openBooking = listingId => {
     setBookingOpenId(listingId);
     setBookingDate(MIN_SESSION_DATETIME);
     setBookingMessage('');
+    setBookingCredits('');
+    setBookingPreview(null);
     setBookingError('');
   };
 
@@ -135,9 +172,13 @@ const BrowseSkills = () => {
         listingId,
         proposedSessionAt: new Date(bookingDate).toISOString(),
         message: bookingMessage.trim() || undefined,
+        creditsToRedeem: Number(bookingCredits) || 0,
       });
       setBookedIds(prev => new Set(prev).add(listingId));
       setBookingOpenId(null);
+      if (walletBalance != null && bookingPreview?.creditsApplied) {
+        setWalletBalance(walletBalance - bookingPreview.creditsApplied);
+      }
       addToast('Trade proposal sent successfully!', 'success');
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to send the proposal. Please try again.';
@@ -303,7 +344,7 @@ const BrowseSkills = () => {
                 ) : isFormOpen ? (
                   <div className="mt-4 space-y-3 border-t border-concrete-200 pt-4">
                     <p className="text-xs text-steel-500">
-                      Booking locks in today's live rate:{' '}
+                      Booking locks in today's live price:{' '}
                       <span className="font-semibold text-navy-900">{formatCurrency(listing.currentPriceBDT)}</span>
                     </p>
                     <div>
@@ -327,6 +368,44 @@ const BrowseSkills = () => {
                       onChange={e => setBookingMessage(e.target.value)}
                       maxLength={500}
                     />
+
+                    {isLoggedIn && walletBalance > 0 && (
+                      <div>
+                        <label
+                          htmlFor={`session-credits-${listing._id}`}
+                          className="mb-1 block text-xs font-medium text-steel-700"
+                        >
+                          Redeem credits ({walletBalance} available)
+                        </label>
+                        <input
+                          id={`session-credits-${listing._id}`}
+                          type="number"
+                          min="0"
+                          max={walletBalance}
+                          step="1"
+                          placeholder="0"
+                          className="input-base"
+                          value={bookingCredits}
+                          onChange={e => setBookingCredits(e.target.value)}
+                        />
+                        {bookingPreview && (
+                          <p className="mt-1.5 text-xs text-steel-600">
+                            {bookingPreview.creditsApplied > 0 ? (
+                              <>
+                                {bookingPreview.creditsApplied} credit{bookingPreview.creditsApplied !== 1 ? 's' : ''} = −
+                                {formatCurrency(bookingPreview.discountBDT)} → final price{' '}
+                                <span className="font-semibold text-navy-900">
+                                  {formatCurrency(bookingPreview.finalPriceBDT)}
+                                </span>
+                              </>
+                            ) : (
+                              `Up to ${bookingPreview.maxCreditsAllowed} credits usable on this trade (max ${bookingPreview.maxDiscountPercent}% off).`
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {bookingError && <p className="text-xs text-red-600">{bookingError}</p>}
                     <div className="flex gap-2">
                       <Button size="sm" disabled={bookingSubmitting} onClick={() => submitBooking(listing._id)}>
