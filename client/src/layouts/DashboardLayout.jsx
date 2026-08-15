@@ -1,7 +1,8 @@
 /**
- * layouts/DashboardLayout.jsx — Authenticated member layout.
+ * layouts/DashboardLayout.jsx — Responsive Authenticated Member Layout
  */
 
+import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import Logo from '../components/common/Logo';
 import Avatar from '../components/ui/Avatar';
@@ -18,7 +19,6 @@ const SIDEBAR_LINKS = [
   { label: 'Credit Wallet',  to: ROUTES.WALLET,                icon: 'CW' },
   { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
   { label: 'Transactions',   to: `${ROUTES.DASHBOARD}/transactions`, icon: 'TX' },
-  { label: 'Wallet',         to: `${ROUTES.DASHBOARD}/wallet`,  icon: 'CR' },
   { label: 'Messages',       to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
   { label: 'Reviews',        to: `${ROUTES.DASHBOARD}/reviews`,  icon: 'RV' },
   { label: 'Settings',       to: `${ROUTES.DASHBOARD}/settings`, icon: 'ST' },
@@ -27,92 +27,130 @@ const SIDEBAR_LINKS = [
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const firstName = user?.name?.split(' ')[0] || 'Member Workspace';
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   const handleLogout = async () => {
+    closeMobileMenu();
     await logout();
     navigate(ROUTES.HOME);
   };
 
   return (
-  <div className="min-h-screen bg-page lg:flex">
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-concrete-200 bg-white">
-      <div className="border-b border-concrete-200 p-5 flex items-center justify-between">
-        <Logo />
-        <NavLink to={ROUTES.HOME} className="text-xs font-semibold text-steel-600 hover:text-navy-900">
-          ← Home
-        </NavLink>
-      </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Dashboard navigation">
-        {SIDEBAR_LINKS.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.to === ROUTES.DASHBOARD}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors duration-150 ${
-                isActive
-                  ? 'bg-navy-50 text-navy-900'
-                  : 'text-steel-700 hover:bg-concrete-50 hover:text-navy-900'
-              }`
-            }
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded border border-concrete-200 bg-white text-[10px] font-bold text-steel-600">
-              {link.icon}
-            </span>
-            {link.label}
+    <div className="min-h-screen bg-page lg:flex">
+      {/* ── Desktop Sidebar ────────────────────────────────────────────────── */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-concrete-200 bg-white">
+        <div className="border-b border-concrete-200 p-5 flex items-center justify-between">
+          <Logo />
+          <NavLink to={ROUTES.HOME} className="text-xs font-semibold text-steel-600 hover:text-navy-900">
+            ← Home
           </NavLink>
-        ))}
-      </nav>
+        </div>
 
-      <div className="border-t border-concrete-200 p-4">
-        <div className="rounded-md bg-concrete-50 p-3">
-          <div className="flex items-center gap-3">
-            <Avatar initials={user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ME'} size="sm" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-950">{firstName}</p>
-              <p className="truncate text-xs text-steel-500">{user?.email || 'Logged in'}</p>
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Dashboard navigation">
+          {SIDEBAR_LINKS.map(link => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.to === ROUTES.DASHBOARD}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-navy-50 text-navy-900'
+                    : 'text-steel-700 hover:bg-concrete-50 hover:text-navy-900'
+                }`
+              }
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded border border-concrete-200 bg-white text-[10px] font-bold text-steel-600">
+                {link.icon}
+              </span>
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="border-t border-concrete-200 p-4">
+          <div className="rounded-md bg-concrete-50 p-3">
+            <div className="flex items-center gap-3">
+              <Avatar initials={user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ME'} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-950">{firstName}</p>
+                <p className="truncate text-xs text-steel-500">{user?.email || 'Logged in'}</p>
+              </div>
+            </div>
+            <button
+              id="sidebar-logout-btn"
+              type="button"
+              onClick={handleLogout}
+              className="mt-3 w-full rounded-md border border-concrete-300 px-3 py-2 text-sm font-semibold text-steel-700 transition-colors duration-150 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Content & Mobile Header ───────────────────────────────────── */}
+      <div className="min-h-screen flex-1 lg:ml-64">
+        {/* Mobile Header Bar */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-concrete-200 bg-white px-4 py-3 lg:hidden">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(prev => !prev)}
+              className="flex items-center gap-1.5 rounded-md border border-concrete-300 px-3 py-1.5 text-xs font-semibold text-steel-700 hover:bg-concrete-50"
+            >
+              <span>{isMobileMenuOpen ? '✕ Close' : '☰ Menu'}</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Slide-down Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-b border-concrete-200 bg-white p-4 space-y-1 animate-in slide-in-from-top-2">
+            <nav className="grid grid-cols-2 gap-2">
+              {SIDEBAR_LINKS.map(link => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === ROUTES.DASHBOARD}
+                  onClick={closeMobileMenu}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-navy-800 text-white'
+                        : 'bg-concrete-50 text-steel-700 hover:bg-concrete-100'
+                    }`
+                  }
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded bg-white/20 text-[9px] font-bold">
+                    {link.icon}
+                  </span>
+                  <span className="truncate">{link.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <div className="pt-3 border-t border-concrete-200 flex justify-between items-center">
+              <span className="text-xs text-steel-600 truncate max-w-[180px]">{user?.email}</span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-xs font-semibold text-red-600 hover:underline"
+              >
+                Log Out
+              </button>
             </div>
           </div>
-          <button
-            id="sidebar-logout-btn"
-            type="button"
-            onClick={handleLogout}
-            className="mt-3 w-full rounded-md border border-concrete-300 px-3 py-2 text-sm font-semibold text-steel-700 transition-colors duration-150 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-          >
-            Log Out
-          </button>
-        </div>
+        )}
+
+        <main className="p-4 sm:p-6 lg:p-8">
+          <Outlet />
+        </main>
       </div>
-    </aside>
-
-    <div className="min-h-screen flex-1 lg:ml-64">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-concrete-200 bg-white px-4 py-4 lg:hidden">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <NavLink
-            to={ROUTES.HOME}
-            className="rounded-md border border-concrete-300 px-3 py-2 text-xs font-semibold text-steel-700 hover:bg-concrete-50"
-          >
-            Home
-          </NavLink>
-          <button
-            id="dashboard-mobile-logout-btn"
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md border border-concrete-300 px-3 py-2 text-xs font-semibold text-steel-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors duration-150"
-          >
-            Log Out
-          </button>
-        </div>
-      </header>
-
-      <main className="p-4 sm:p-6 lg:p-8">
-        <Outlet />
-      </main>
     </div>
-  </div>
   );
 };
 
