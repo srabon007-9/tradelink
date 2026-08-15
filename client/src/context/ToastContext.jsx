@@ -1,5 +1,8 @@
 /**
- * context/ToastContext.jsx — Floating Toast Notification System
+ * context/ToastContext.jsx — Top-Right Popup Notification System
+ *
+ * Provides application-wide top-right popup notifications for important
+ * transactions, bookings, status changes, and system alerts.
  */
 
 import { createContext, useContext, useState, useCallback } from 'react';
@@ -15,7 +18,7 @@ export const ToastProvider = ({ children }) => {
 
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3500);
+    }, 4000);
   }, []);
 
   const removeToast = useCallback(id => {
@@ -25,8 +28,8 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      {/* Toast Render Container */}
-      <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-2">
+      {/* Top-Right Popup Notification Container */}
+      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-md w-full pointer-events-none px-2">
         {toasts.map(toast => {
           const isSuccess = toast.type === 'success';
           const isError = toast.type === 'error';
@@ -35,26 +38,33 @@ export const ToastProvider = ({ children }) => {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-center justify-between gap-3 p-4 rounded-xl shadow-lg border transition-all duration-300 transform translate-y-0 animate-in slide-in-from-top-2 ${
+              className={`pointer-events-auto flex items-start justify-between gap-3 p-4 rounded-xl shadow-2xl border transition-all duration-300 transform animate-in slide-in-from-top-4 fade-in ${
                 isSuccess
-                  ? 'bg-emerald-900 text-white border-emerald-700'
+                  ? 'bg-slate-950/95 text-white border-emerald-500/50 shadow-emerald-950/20'
                   : isError
-                  ? 'bg-red-900 text-white border-red-700'
+                  ? 'bg-slate-950/95 text-white border-red-500/50 shadow-red-950/20'
                   : isWarning
-                  ? 'bg-amber-900 text-white border-amber-700'
-                  : 'bg-navy-900 text-white border-navy-700'
+                  ? 'bg-slate-950/95 text-white border-amber-500/50 shadow-amber-950/20'
+                  : 'bg-slate-950/95 text-white border-sky-500/50 shadow-sky-950/20'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <span className="text-base">
-                  {isSuccess ? '✅' : isError ? '⚠️' : isWarning ? '🔔' : 'ℹ️'}
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="text-lg flex-shrink-0 mt-0.5">
+                  {isSuccess ? '🎉' : isError ? '❌' : isWarning ? '🔔' : 'ℹ️'}
                 </span>
-                <p className="text-sm font-medium leading-snug">{toast.message}</p>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase font-bold tracking-wider text-steel-400 mb-0.5">
+                    {isSuccess ? 'Success' : isError ? 'Alert' : isWarning ? 'Notice' : 'Notification'}
+                  </p>
+                  <p className="text-sm font-medium leading-snug text-slate-100 break-words">{toast.message}</p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="text-white/70 hover:text-white text-xs font-bold p-1 rounded"
+                className="text-steel-400 hover:text-white text-xs font-bold p-1 rounded transition-colors flex-shrink-0 ml-2"
+                title="Dismiss"
               >
                 ✕
               </button>

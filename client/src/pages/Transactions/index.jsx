@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const TransactionCard = ({ transaction, busy, onConfirm }) => {
@@ -80,6 +81,7 @@ const TransactionCard = ({ transaction, busy, onConfirm }) => {
 };
 
 const Transactions = () => {
+  const { addToast } = useToast();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,10 +104,18 @@ const Transactions = () => {
     setError('');
     setBusyId(id);
     try {
-      await api.patch(`/transactions/${id}/confirm`);
+      const res = await api.patch(`/transactions/${id}/confirm`);
+      const updatedTx = res.data.data;
+      if (updatedTx?.status === 'released') {
+        addToast('Work confirmed! Escrow released & credit wallet points awarded 🎉', 'success');
+      } else {
+        addToast('Completion confirmed. Waiting for the other party to confirm.', 'info');
+      }
       load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to confirm. Please try again.');
+      const msg = err.response?.data?.message || 'Failed to confirm. Please try again.';
+      setError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }

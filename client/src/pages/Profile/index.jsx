@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import useAuth from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -29,6 +30,7 @@ const Field = ({ label, value }) => (
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
+  const { addToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -76,6 +78,7 @@ const Profile = () => {
 
     if (!form.name.trim()) {
       setStatusMessage({ type: 'error', text: 'Full Name is required.' });
+      addToast('Full Name is required', 'error');
       return;
     }
 
@@ -91,15 +94,20 @@ const Profile = () => {
 
       if (res.success) {
         setStatusMessage({ type: 'success', text: 'Profile updated successfully!' });
+        addToast('Profile updated successfully!', 'success');
         setIsEditing(false);
       } else {
-        setStatusMessage({ type: 'error', text: res.message || 'Failed to update profile.' });
+        const msg = res.message || 'Failed to update profile.';
+        setStatusMessage({ type: 'error', text: msg });
+        addToast(msg, 'error');
       }
     } catch (err) {
+      const msg = err.response?.data?.message || 'An error occurred while updating profile.';
       setStatusMessage({
         type: 'error',
-        text: err.response?.data?.message || 'An error occurred while updating profile.',
+        text: msg,
       });
+      addToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }

@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const STATUS_COLORS = {
@@ -113,6 +114,7 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
 };
 
 const Requests = () => {
+  const { addToast } = useToast();
   const [tab, setTab] = useState('received');
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
@@ -144,12 +146,20 @@ const Requests = () => {
     try {
       if (action === 'cancel') {
         await api.delete(`/trade-proposals/${id}`);
+        addToast('Trade proposal cancelled', 'info');
       } else {
         await api.patch(`/trade-proposals/${id}/${action}`);
+        if (action === 'accept') {
+          addToast('Trade proposal accepted! Calendar invite & escrow hold created.', 'success');
+        } else if (action === 'decline') {
+          addToast('Trade proposal declined', 'info');
+        }
       }
       loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
+      setError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }
