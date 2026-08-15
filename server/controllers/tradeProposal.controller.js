@@ -10,11 +10,12 @@ const tradeProposalController = {
   // ─── POST /api/trade-proposals ───────────────────────────────────────────────
   createProposal: async (req, res, next) => {
     try {
-      const { listingId, proposedSessionAt, message } = req.body;
+      const { listingId, proposedSessionAt, message, creditsToRedeem } = req.body;
       const proposal = await tradeProposalService.createProposal(req.user.id, {
         listingId,
         proposedSessionAt,
         message,
+        creditsToRedeem,
       });
 
       return res.status(201).json({

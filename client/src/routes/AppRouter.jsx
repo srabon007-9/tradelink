@@ -22,6 +22,7 @@ import MySkills     from '../pages/MySkills';
 import Requests     from '../pages/Requests';
 import Transactions from '../pages/Transactions';
 import Profile      from '../pages/Profile';
+import Wallet       from '../pages/Wallet';
 import About        from '../pages/About';
 import Contact      from '../pages/Contact';
 import NotFound     from '../pages/NotFound';
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
       { path: 'requests',    element: <Requests /> },
       { path: 'transactions', element: <Transactions /> },
       { path: 'profile',     element: <Profile /> },
+      { path: 'wallet',      element: <Wallet /> },
       // Future: messages, reviews...
     ],
   },

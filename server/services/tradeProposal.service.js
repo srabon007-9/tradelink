@@ -17,6 +17,11 @@
  * The instant a proposal is accepted, an escrow hold is opened for it
  * (see transaction.service.js / the "Transaction" feature) — the agreed
  * price is held pending until both sides confirm the work was done.
+ *
+ * A requester can redeem Credit Wallet credits when proposing a trade to
+ * discount its cost (see creditWallet.service.js) — the escrow that later
+ * opens on acceptance holds the discounted finalPriceBDT, not the raw
+ * priceAtProposal.
  */
 
 const TradeProposal = require('../models/TradeProposal.model');
@@ -26,6 +31,7 @@ const User = require('../models/User.model');
 const valuationService = require('./valuation.service');
 const googleCalendarService = require('./googleCalendar.service');
 const transactionService = require('./transaction.service');
+const creditWalletService = require('./creditWallet.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -54,11 +60,12 @@ const adjustDemand = async (category, delta) => {
 
 const tradeProposalService = {
   /**
-   * Propose a trade: book a listing's session at its current live price.
+   * Propose a trade: book a listing's session at its current live price,
+   * optionally redeeming wallet credits to discount that price.
    * @param {string} requesterId
-   * @param {{ listingId: string, proposedSessionAt: string, message?: string }} data
+   * @param {{ listingId: string, proposedSessionAt: string, message?: string, creditsToRedeem?: number }} data
    */
-  createProposal: async (requesterId, { listingId, proposedSessionAt, message }) => {
+  createProposal: async (requesterId, { listingId, proposedSessionAt, message, creditsToRedeem }) => {
     const listing = await SkillListing.findById(listingId);
     if (!listing) throw ApiError.notFound('Skill listing not found');
     if (listing.status !== 'active') {
@@ -80,6 +87,14 @@ const tradeProposalService = {
       throw ApiError.badRequest('Proposed session time must be a valid date in the future');
     }
 
+    // Cap the redemption against the requester's actual balance and the
+    // max-discount-percent rule — never trust the requested amount as-is.
+    const redemption = await creditWalletService.previewRedemption(
+      requesterId,
+      priceAtProposal,
+      creditsToRedeem || 0
+    );
+
     const proposal = await TradeProposal.create({
       listing: listing._id,
       requester: requesterId,
@@ -87,9 +102,21 @@ const tradeProposalService = {
       listingTitle: listing.title,
       category: listing.category,
       priceAtProposal,
+      creditsRedeemed: redemption.creditsApplied,
+      discountBDT: redemption.discountBDT,
+      finalPriceBDT: redemption.finalPriceBDT,
       proposedSessionAt: sessionDate,
       message: message || '',
     });
+
+    if (redemption.creditsApplied > 0) {
+      await creditWalletService.redeemCredits(
+        requesterId,
+        redemption.creditsApplied,
+        `Redeemed toward trade proposal for "${listing.title}"`,
+        { relatedTradeProposal: proposal._id }
+      );
+    }
 
     await adjustDemand(listing.category, 1);
 
@@ -145,7 +172,10 @@ const tradeProposalService = {
       summary: `TradeLink session: ${proposal.listingTitle}`,
       description:
         `Skill exchange session between ${requester.name} and ${provider.name} via TradeLink.\n` +
-        `Agreed price: ৳${proposal.priceAtProposal} BDT.` +
+        `Agreed price: ৳${proposal.finalPriceBDT} BDT` +
+        (proposal.creditsRedeemed > 0
+          ? ` (৳${proposal.priceAtProposal} less ${proposal.creditsRedeemed} redeemed credits).`
+          : '.') +
         (proposal.message ? `\nNote: ${proposal.message}` : ''),
       startTime: proposal.proposedSessionAt,
       durationMinutes: SESSION_DURATION_MINUTES,

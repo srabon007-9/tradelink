@@ -9,7 +9,9 @@
  *
  * Each listing shows its provider's details, and "Book Session" opens a
  * Trade Proposal — see pages/Requests for accepting/declining/tracking
- * proposals once sent.
+ * proposals once sent. The booking form also lets a logged-in requester
+ * redeem Credit Wallet credits for a live-previewed discount before they
+ * send the proposal (see Credit Wallet System / pages/Wallet).
  */
 
 import { useEffect, useState } from 'react';
@@ -76,9 +78,12 @@ const BrowseSkills = () => {
   const [bookingOpenId, setBookingOpenId] = useState(null);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingCredits, setBookingCredits] = useState('');
+  const [bookingPreview, setBookingPreview] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookedIds, setBookedIds] = useState(() => new Set());
+  const [walletBalance, setWalletBalance] = useState(null);
 
   // Debounce free-text search so we're not firing a request per keystroke.
   useEffect(() => {
@@ -101,12 +106,43 @@ const BrowseSkills = () => {
       .finally(() => setLoading(false));
   }, [category, search, sort]);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    api
+      .get('/wallet/mine')
+      .then(res => setWalletBalance(res.data.data.balance))
+      .catch(() => setWalletBalance(null));
+  }, [isLoggedIn]);
+
+  // Live discount preview for whichever booking form is open, debounced.
+  useEffect(() => {
+    if (!bookingOpenId) {
+      setBookingPreview(null);
+      return undefined;
+    }
+    const listing = listings.find(l => l._id === bookingOpenId);
+    if (!listing || listing.currentPriceBDT == null) return undefined;
+
+    const t = setTimeout(() => {
+      api
+        .get('/wallet/preview-redemption', {
+          params: { price: listing.currentPriceBDT, credits: Number(bookingCredits) || 0 },
+        })
+        .then(res => setBookingPreview(res.data.data))
+        .catch(() => setBookingPreview(null));
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [bookingOpenId, bookingCredits, listings]);
+
   const totalListings = categories.reduce((sum, c) => sum + c.listingCount, 0);
 
   const openBooking = listingId => {
     setBookingOpenId(listingId);
     setBookingDate('');
     setBookingMessage('');
+    setBookingCredits('');
+    setBookingPreview(null);
     setBookingError('');
   };
 
@@ -128,9 +164,13 @@ const BrowseSkills = () => {
         listingId,
         proposedSessionAt: new Date(bookingDate).toISOString(),
         message: bookingMessage.trim() || undefined,
+        creditsToRedeem: Number(bookingCredits) || 0,
       });
       setBookedIds(prev => new Set(prev).add(listingId));
       setBookingOpenId(null);
+      if (walletBalance != null && bookingPreview?.creditsApplied) {
+        setWalletBalance(walletBalance - bookingPreview.creditsApplied);
+      }
     } catch (err) {
       setBookingError(err.response?.data?.message || 'Failed to send the proposal. Please try again.');
     } finally {
@@ -292,6 +332,44 @@ const BrowseSkills = () => {
                         onChange={e => setBookingMessage(e.target.value)}
                         maxLength={500}
                       />
+
+                      {isLoggedIn && walletBalance > 0 && (
+                        <div>
+                          <label
+                            htmlFor={`session-credits-${listing._id}`}
+                            className="mb-1 block text-xs font-medium text-steel-700"
+                          >
+                            Redeem credits ({walletBalance} available)
+                          </label>
+                          <input
+                            id={`session-credits-${listing._id}`}
+                            type="number"
+                            min="0"
+                            max={walletBalance}
+                            step="1"
+                            placeholder="0"
+                            className="input-base"
+                            value={bookingCredits}
+                            onChange={e => setBookingCredits(e.target.value)}
+                          />
+                          {bookingPreview && (
+                            <p className="mt-1.5 text-xs text-steel-600">
+                              {bookingPreview.creditsApplied > 0 ? (
+                                <>
+                                  {bookingPreview.creditsApplied} credit{bookingPreview.creditsApplied !== 1 ? 's' : ''} = −
+                                  {formatCurrency(bookingPreview.discountBDT)} → final price{' '}
+                                  <span className="font-semibold text-navy-900">
+                                    {formatCurrency(bookingPreview.finalPriceBDT)}
+                                  </span>
+                                </>
+                              ) : (
+                                `Up to ${bookingPreview.maxCreditsAllowed} credits usable on this trade (max ${bookingPreview.maxDiscountPercent}% off).`
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {bookingError && <p className="text-xs text-red-600">{bookingError}</p>}
                       <div className="flex gap-2">
                         <Button size="sm" disabled={bookingSubmitting} onClick={() => submitBooking(listing._id)}>

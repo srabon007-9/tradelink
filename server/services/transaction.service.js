@@ -7,9 +7,15 @@
  * proposal is accepted, held 'pending', and released to the provider
  * only once both the requester and the provider have independently
  * confirmed the work was completed.
+ *
+ * The instant a transaction releases, both the requester and the
+ * provider earn Credit Wallet credits from it (see
+ * creditWallet.service.js) — that's what "completing a trade" means for
+ * the Credit Wallet System.
  */
 
 const Transaction = require('../models/Transaction.model');
+const creditWalletService = require('./creditWallet.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -28,7 +34,7 @@ const transactionService = {
       requester: proposal.requester,
       provider: proposal.provider,
       listingTitle: proposal.listingTitle,
-      amount: proposal.priceAtProposal,
+      amount: proposal.finalPriceBDT,
     });
 
     logger.info(`[Transaction] Escrow opened for proposal ${proposal._id} — ৳${transaction.amount} BDT pending.`);
@@ -100,6 +106,23 @@ const transactionService = {
     }
 
     await transaction.save();
+
+    if (transaction.status === 'released') {
+      const credits = creditWalletService.creditsForTradeValue(transaction.amount);
+      await creditWalletService.earnCredits(
+        transaction.requester,
+        credits,
+        `Completed trade as requester — "${transaction.listingTitle}"`,
+        { relatedTransaction: transaction._id }
+      );
+      await creditWalletService.earnCredits(
+        transaction.provider,
+        credits,
+        `Completed trade as provider — "${transaction.listingTitle}"`,
+        { relatedTransaction: transaction._id }
+      );
+    }
+
     return transaction;
   },
 };

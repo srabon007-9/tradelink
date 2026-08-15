@@ -31,6 +31,11 @@ const validateCreateProposal = [
     .isLength({ max: 500 })
     .withMessage('Message must be under 500 characters'),
 
+  body('creditsToRedeem')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Credits to redeem must be a non-negative whole number'),
+
   validate,
 ];
 
