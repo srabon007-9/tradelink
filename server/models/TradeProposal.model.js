@@ -17,6 +17,10 @@
  * Listing details are denormalized (listingTitle/category) so a proposal
  * stays meaningful and displayable even if the underlying listing is later
  * edited or deleted.
+ *
+ * The requester may redeem Credit Wallet credits at proposal time to
+ * discount priceAtProposal down to finalPriceBDT (see
+ * creditWallet.service.js and tradeProposal.service.js's createProposal).
  */
 
 const mongoose = require('mongoose');
@@ -52,6 +56,15 @@ const TradeProposalSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+
+    // Credit Wallet System — credits the requester redeemed toward this
+    // trade's cost (see creditWallet.service.js), and the resulting
+    // discounted price. finalPriceBDT equals priceAtProposal when no
+    // credits were redeemed, and is what the escrow Transaction actually
+    // holds/releases (see transaction.service.js).
+    creditsRedeemed: { type: Number, default: 0, min: 0 },
+    discountBDT: { type: Number, default: 0, min: 0 },
+    finalPriceBDT: { type: Number, required: true, min: 0 },
 
     proposedSessionAt: {
       type: Date,

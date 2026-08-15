@@ -21,6 +21,7 @@ const skillListingRoutes     = require('./skillListing.routes');
 const categoryBrowsingRoutes = require('./categoryBrowsing.routes');
 const tradeProposalRoutes    = require('./tradeProposal.routes');
 const transactionRoutes      = require('./transaction.routes');
+const creditWalletRoutes     = require('./creditWallet.routes');
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/skill-listings',  skillListingRoutes);
 router.use('/browse',          categoryBrowsingRoutes);
 router.use('/trade-proposals', tradeProposalRoutes);
 router.use('/transactions',    transactionRoutes);
+router.use('/wallet',          creditWalletRoutes);
 
 module.exports = router;
