@@ -93,7 +93,7 @@ const DashboardLayout = () => {
       </aside>
 
       {/* ── Main Content & Mobile Header ───────────────────────────────────── */}
-      <div className="min-h-screen flex-1 lg:ml-64">
+      <div className="min-h-screen flex-1 min-w-0 max-w-full overflow-x-hidden lg:ml-64">
         {/* Mobile Header Bar */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-concrete-200 bg-white px-4 py-3 lg:hidden">
           <Logo />
@@ -146,7 +146,7 @@ const DashboardLayout = () => {
           </div>
         )}
 
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>
