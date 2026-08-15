@@ -2,6 +2,16 @@
 
 /**
  * services/transaction.service.js — Escrow System (feature name: "Transaction")
+ *
+ * Business logic for the escrow ledger: opened the moment a trade
+ * proposal is accepted, held 'pending', and released to the provider
+ * only once both the requester and the provider have independently
+ * confirmed the work was completed.
+ *
+ * The instant a transaction releases, both the requester and the
+ * provider earn Credit Wallet credits from it (see
+ * creditWallet.service.js) — that's what "completing a trade" means for
+ * the Credit Wallet System.
  */
 
 const Transaction = require('../models/Transaction.model');
@@ -10,9 +20,14 @@ const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
 const transactionService = {
+  /**
+   * Called from tradeProposal.service.js the instant a proposal is
+   * accepted — opens the escrow hold for that trade.
+   * @param {import('../models/TradeProposal.model')} proposal
+   */
   createForProposal: async proposal => {
     const existing = await Transaction.findOne({ tradeProposal: proposal._id });
-    if (existing) return existing;
+    if (existing) return existing; // safety net — a proposal only ever gets accepted once
 
     const transaction = await Transaction.create({
       tradeProposal: proposal._id,
@@ -26,6 +41,7 @@ const transactionService = {
     return transaction;
   },
 
+  /** Every transaction the user is party to, with their role in each. */
   getMyTransactions: async userId => {
     const transactions = await Transaction.find({ $or: [{ requester: userId }, { provider: userId }] })
       .sort({ createdAt: -1 })
@@ -51,6 +67,10 @@ const transactionService = {
     return transaction;
   },
 
+  /**
+   * Either party confirms the work was completed. Once both have
+   * confirmed, the escrow releases to the provider.
+   */
   confirmCompletion: async (id, userId) => {
     const transaction = await Transaction.findById(id);
     if (!transaction) throw ApiError.notFound('Transaction not found');

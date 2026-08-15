@@ -2,6 +2,26 @@
 
 /**
  * services/tradeProposal.service.js — Trade Proposal Builder With Session Scheduling
+ *
+ * Business logic for proposing, accepting/declining, and cancelling trade
+ * proposals. A proposal captures the exact live valuation-engine price at
+ * the moment it's made, so both sides commit to a known number. Once the
+ * provider accepts, a shared Google Calendar session is created (best
+ * effort — see googleCalendar.service.js).
+ *
+ * A pending proposal is an open "request" for its category, exactly what
+ * valuation.service.js's updateDemand() was built for — creating a
+ * proposal counts as +1 demand, and it's released (-1) the moment the
+ * proposal stops being pending (accepted, declined, or cancelled).
+ *
+ * The instant a proposal is accepted, an escrow hold is opened for it
+ * (see transaction.service.js / the "Transaction" feature) — the agreed
+ * price is held pending until both sides confirm the work was done.
+ *
+ * A requester can redeem Credit Wallet credits when proposing a trade to
+ * discount its cost (see creditWallet.service.js) — the escrow that later
+ * opens on acceptance holds the discounted finalPriceBDT, not the raw
+ * priceAtProposal.
  */
 
 const TradeProposal = require('../models/TradeProposal.model');

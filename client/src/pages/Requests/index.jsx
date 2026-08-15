@@ -44,7 +44,16 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
             <span className="font-medium text-steel-800">{counterparty?.name || 'Unknown'}</span>
           </p>
         </div>
-        <p className="text-lg font-bold text-navy-900">{formatCurrency(proposal.priceAtProposal)}</p>
+        <div className="text-right">
+          <p className="text-lg font-bold text-navy-900">{formatCurrency(proposal.finalPriceBDT)}</p>
+          {proposal.creditsRedeemed > 0 && (
+            <p className="text-xs text-steel-500">
+              <span className="line-through">{formatCurrency(proposal.priceAtProposal)}</span>{' '}
+              −{formatCurrency(proposal.discountBDT)} ({proposal.creditsRedeemed} credit
+              {proposal.creditsRedeemed !== 1 ? 's' : ''})
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-1 text-sm text-steel-600 sm:grid-cols-2">

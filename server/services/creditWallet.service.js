@@ -13,6 +13,18 @@
  * previewRedemption() to compute the capped discount and redeemCredits()
  * to actually spend them. Credits never replace money; the trade still
  * settles in BDT, just for a smaller amount.
+ *
+ * EARN RATE
+ * ─────────
+ *   1 credit per ৳100 BDT of a completed trade's value, minimum 1 credit,
+ *   awarded to BOTH the provider and the requester independently. Bigger
+ *   trades earn more — this isn't a flat per-trade bonus.
+ *
+ * REDEMPTION
+ * ──────────
+ *   1 credit = ৳10 BDT off, capped at 20% of the trade's price — so a
+ *   large stash of credits can meaningfully discount a small trade, but
+ *   can never wipe out (or nearly wipe out) what a provider is paid.
  */
 
 const CreditWallet = require('../models/CreditWallet.model');
