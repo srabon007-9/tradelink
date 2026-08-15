@@ -1,22 +1,19 @@
 'use strict';
 
 /**
- * routes/transaction.routes.js — Escrow System (Transaction) Routes
- *
- * GET   /api/transactions/mine        → transactions where I'm requester or provider
- * GET   /api/transactions/:id         → single transaction (either party only)
- * PATCH /api/transactions/:id/confirm → confirm work completed; releases once both confirm
+ * routes/transaction.routes.js — Escrow System Routes
  */
 
 const express = require('express');
 const transactionController = require('../controllers/transaction.controller');
 const { protect } = require('../middleware/auth');
-const { validateTransactionId } = require('../validations/transaction.validation');
 
 const router = express.Router();
 
-router.get('/mine', protect, transactionController.getMine);
-router.get('/:id', protect, validateTransactionId, transactionController.getById);
-router.patch('/:id/confirm', protect, validateTransactionId, transactionController.confirm);
+router.use(protect);
+
+router.get('/mine', transactionController.getMyTransactions);
+router.get('/:id', transactionController.getTransaction);
+router.patch('/:id/confirm', transactionController.confirmCompletion);
 
 module.exports = router;

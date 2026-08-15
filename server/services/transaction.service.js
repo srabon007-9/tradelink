@@ -21,7 +21,7 @@ const transactionService = {
    */
   createForProposal: async proposal => {
     const existing = await Transaction.findOne({ tradeProposal: proposal._id });
-    if (existing) return existing; // safety net — a proposal only ever gets accepted once
+    if (existing) return existing;
 
     const transaction = await Transaction.create({
       tradeProposal: proposal._id,

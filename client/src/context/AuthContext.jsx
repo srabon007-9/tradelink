@@ -1,10 +1,10 @@
 /**
  * context/AuthContext.jsx — Authentication Context
  *
- * Provides auth state, user info, and live wallet balance to the entire app.
+ * Provides auth state and user info to the entire app.
  */
 
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState } from 'react';
 import api from '../services/api';
 
 /** @type {React.Context<AuthContextValue>} */
@@ -20,29 +20,7 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  const [walletBalance, setWalletBalance] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const refreshWalletBalance = useCallback(async () => {
-    if (!user) {
-      setWalletBalance(null);
-      return;
-    }
-    try {
-      const res = await api.get('/wallet');
-      setWalletBalance(res.data.data.balance);
-    } catch {
-      // ignore
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      refreshWalletBalance();
-    } else {
-      setWalletBalance(null);
-    }
-  }, [user, refreshWalletBalance]);
 
   const register = async data => {
     setIsLoading(true);
@@ -87,7 +65,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('tl_user');
       localStorage.removeItem('tl_token');
       setUser(null);
-      setWalletBalance(null);
     }
   };
 
@@ -109,14 +86,12 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    walletBalance,
     isLoading,
     isLoggedIn: !!user,
     login,
     register,
     logout,
     updateProfile,
-    refreshWalletBalance,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -18,7 +18,7 @@ import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { ROUTES } from '../../constants';
-import { formatCredits, truncate } from '../../utils/formatters';
+import { formatCurrency, truncate } from '../../utils/formatters';
 
 const toLocalInputValue = date => {
   const pad = n => String(n).padStart(2, '0');
@@ -51,7 +51,7 @@ const CategoryChip = ({ active, label, price, count, onClick }) => (
     {label}
     {price != null && (
       <span className={cn('text-xs font-bold', active ? 'text-accent-200' : 'text-accent-700')}>
-        {formatCredits(price)}
+        {formatCurrency(price)}
       </span>
     )}
     <span className={cn('text-xs', active ? 'text-navy-100' : 'text-steel-400')}>({count})</span>
@@ -254,7 +254,7 @@ const BrowseSkills = () => {
                   </div>
 
                   {isPriced ? (
-                    <span className="text-lg font-bold text-navy-900">{formatCredits(listing.currentPriceBDT)}</span>
+                    <span className="text-lg font-bold text-navy-900">{formatCurrency(listing.currentPriceBDT)}</span>
                   ) : (
                     <span className="text-xs font-semibold text-steel-400">Not tracked</span>
                   )}
@@ -304,7 +304,7 @@ const BrowseSkills = () => {
                   <div className="mt-4 space-y-3 border-t border-concrete-200 pt-4">
                     <p className="text-xs text-steel-500">
                       Booking locks in today's live rate:{' '}
-                      <span className="font-semibold text-navy-900">{formatCredits(listing.currentPriceBDT)}</span>
+                      <span className="font-semibold text-navy-900">{formatCurrency(listing.currentPriceBDT)}</span>
                     </p>
                     <div>
                       <label htmlFor={`session-time-${listing._id}`} className="mb-1 block text-xs font-medium text-steel-700">

@@ -42,11 +42,11 @@ const TransactionCard = ({ transaction, busy, onConfirm }) => {
       <div className="mt-3 rounded-md border border-concrete-200 bg-concrete-50 p-3 text-sm text-steel-700">
         {isReleased ? (
           <span className="font-semibold text-emerald-700">
-            Both parties confirmed — ৳{transaction.amount} BDT released to the provider.
+            Both parties confirmed — {formatCurrency(transaction.amount)} released to the provider.
           </span>
         ) : (
           <>
-            ৳{transaction.amount} BDT is held in escrow until both sides confirm the work was completed.
+            {formatCurrency(transaction.amount)} is held in escrow until both sides confirm the work was completed.
             <div className="mt-2 flex flex-wrap gap-4 text-xs">
               <span className={transaction.requesterConfirmed ? 'text-emerald-700 font-semibold' : 'text-steel-500'}>
                 {transaction.requesterConfirmed ? '✓' : '○'} Requester confirmed
@@ -117,7 +117,7 @@ const Transactions = () => {
     <div className="space-y-6">
       <div>
         <span className="eyebrow mb-2">Escrow System</span>
-        <h1 className="text-3xl font-semibold text-slate-950">Transactions</h1>
+        <h1 className="text-3xl font-semibold text-slate-950">Transactions & Escrow</h1>
         <p className="mt-2 text-sm text-steel-600">
           When a trade proposal is accepted, its agreed price moves here and is held in escrow. It only
           releases to the provider once both of you confirm the work was completed.

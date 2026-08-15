@@ -9,13 +9,6 @@ export const formatCurrency = amount =>
     maximumFractionDigits: 0,
   }).format(amount);
 
-export const formatCredits = amount => {
-  if (amount == null) return '—';
-  // Convert BDT price to TradeLink Credits (10 BDT = 1 Credit) or format direct credit count
-  const credits = Math.round(amount / 10);
-  return `${credits} Credits`;
-};
-
 export const formatCompactCurrency = amount =>
   new Intl.NumberFormat('en-BD', {
     notation: 'compact',
@@ -30,10 +23,12 @@ export const truncate = (str, maxLength = 80) =>
 
 export const getInitials = name =>
   name
-    .split(' ')
-    .slice(0, 2)
-    .map(word => word[0]?.toUpperCase() ?? '')
-    .join('');
+    ? name
+        .split(' ')
+        .slice(0, 2)
+        .map(word => word[0]?.toUpperCase() ?? '')
+        .join('')
+    : '';
 
 export const formatDate = date =>
   new Date(date).toLocaleDateString('en-BD', {
