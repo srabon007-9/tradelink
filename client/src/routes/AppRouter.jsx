@@ -24,6 +24,9 @@ import Wallet from '../pages/Wallet';
 import Requests from '../pages/Requests';
 import Transactions from '../pages/Transactions';
 import Profile from '../pages/Profile';
+import Messages from '../pages/Messages';
+import Reviews from '../pages/Reviews';
+import Settings from '../pages/Settings';
 import About from '../pages/About';
 import Contact from '../pages/Contact';
 import NotFound from '../pages/NotFound';
@@ -60,6 +63,9 @@ const router = createBrowserRouter([
       { path: 'requests', element: <Requests /> },
       { path: 'transactions', element: <Transactions /> },
       { path: 'profile', element: <Profile /> },
+      { path: 'messages', element: <Messages /> },
+      { path: 'reviews', element: <Reviews /> },
+      { path: 'settings', element: <Settings /> },
     ],
   },
 

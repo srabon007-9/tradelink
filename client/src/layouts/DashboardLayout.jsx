@@ -11,10 +11,16 @@ import useAuth from '../hooks/useAuth';
 const SIDEBAR_LINKS = [
   { label: 'Home Page',      to: ROUTES.HOME,                  icon: 'HM' },
   { label: 'Overview',       to: ROUTES.DASHBOARD,             icon: 'OV' },
+  { label: 'Browse Skills',  to: ROUTES.BROWSE,                icon: 'SK' },
+  { label: 'Market Prices',  to: `${ROUTES.DASHBOARD}/prices`, icon: 'MP' },
+  { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF' },
   { label: 'My Skills',      to: ROUTES.MY_SKILLS,             icon: 'MS' },
   { label: 'Credit Wallet',  to: ROUTES.WALLET,                icon: 'CW' },
-  { label: 'Browse Skills',  to: ROUTES.BROWSE,                icon: 'SK' },
-  { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF' },
+  { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
+  { label: 'Transactions',   to: `${ROUTES.DASHBOARD}/transactions`, icon: 'TX' },
+  { label: 'Messages',       to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
+  { label: 'Reviews',        to: `${ROUTES.DASHBOARD}/reviews`,  icon: 'RV' },
+  { label: 'Settings',       to: `${ROUTES.DASHBOARD}/settings`, icon: 'ST' },
 ];
 
 const DashboardLayout = () => {
