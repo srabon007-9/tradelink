@@ -43,7 +43,15 @@ const MAX_DISCOUNT_PERCENT = 20; // redemption can never discount more than this
 const getOrCreateWallet = async userId => {
   let wallet = await CreditWallet.findOne({ user: userId });
   if (!wallet) {
-    wallet = await CreditWallet.create({ user: userId, balance: 0 });
+    try {
+      wallet = await CreditWallet.create({ user: userId, balance: 0 });
+    } catch (err) {
+      if (err.code === 11000) {
+        wallet = await CreditWallet.findOne({ user: userId });
+      } else {
+        throw err;
+      }
+    }
   }
   return wallet;
 };

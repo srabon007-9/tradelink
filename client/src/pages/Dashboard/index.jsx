@@ -2,6 +2,7 @@
  * pages/Dashboard/index.jsx — Live Student Command Center
  *
  * Displays live student overview:
+ * - Real-time Credit Wallet Balance & History Summary
  * - Active Skill Listings Overview
  * - Recent Escrow Transactions & Trade Proposals
  * - Quick Action Buttons
@@ -19,6 +20,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [wallet, setWallet] = useState({ balance: 0, entries: [] });
   const [myListings, setMyListings] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [proposals, setProposals] = useState([]);
@@ -27,12 +29,14 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [listingsRes, txRes, propRes] = await Promise.all([
+      const [walletRes, listingsRes, txRes, propRes] = await Promise.all([
+        api.get('/wallet/mine').catch(() => ({ data: { data: { balance: 0, entries: [] } } })),
         api.get('/skill-listings/mine').catch(() => ({ data: { data: [] } })),
         api.get('/transactions/mine').catch(() => ({ data: { data: [] } })),
         api.get('/trade-proposals/received').catch(() => ({ data: { data: [] } })),
       ]);
 
+      setWallet(walletRes.data.data || { balance: 0, entries: [] });
       setMyListings(listingsRes.data.data || []);
       setTransactions(txRes.data.data || []);
       setProposals(propRes.data.data || []);
@@ -61,7 +65,7 @@ const Dashboard = () => {
             Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!
           </h1>
           <p className="mt-1 text-sm text-steel-600">
-            Here is your TradeLink overview: skills offered, trade proposals, and escrow transactions.
+            Here is your TradeLink overview: wallet balance, skills offered, trade proposals, and escrow transactions.
           </p>
         </div>
 
@@ -70,6 +74,11 @@ const Dashboard = () => {
           <Link to={ROUTES.MY_SKILLS}>
             <Button size="sm" variant="primary">
               + Add Skill
+            </Button>
+          </Link>
+          <Link to={ROUTES.WALLET}>
+            <Button size="sm" variant="outline">
+              💳 Credit Wallet
             </Button>
           </Link>
           <Link to={ROUTES.BROWSE}>
@@ -81,11 +90,28 @@ const Dashboard = () => {
       </div>
 
       {/* ── Live Stat Cards ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Skills Offered Card */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Credit Balance Card */}
         <Card className="p-5 border-l-4 border-l-navy-900 bg-navy-50/40">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy-800">Active Skill Listings</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-navy-800">Credit Balance</p>
+            <Badge color="green">Live</Badge>
+          </div>
           <p className="mt-3 text-3xl font-extrabold text-navy-950">
+            {loading ? '…' : `${wallet.balance} Credits`}
+          </p>
+          <div className="mt-3 flex items-center justify-between text-xs text-steel-600">
+            <span>Earn by completing trades</span>
+            <Link to={ROUTES.WALLET} className="font-semibold text-navy-800 hover:underline">
+              View History →
+            </Link>
+          </div>
+        </Card>
+
+        {/* Skills Offered Card */}
+        <Card className="p-5">
+          <p className="text-xs font-semibold text-steel-600">Active Skill Listings</p>
+          <p className="mt-3 text-3xl font-bold text-slate-950">
             {loading ? '…' : activeListingsCount}
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-steel-600">
@@ -98,7 +124,7 @@ const Dashboard = () => {
 
         {/* Pending Proposals Card */}
         <Card className="p-5">
-          <p className="text-xs font-semibold text-steel-600">Pending Trade Proposals</p>
+          <p className="text-xs font-semibold text-steel-600">Pending Proposals</p>
           <p className="mt-3 text-3xl font-bold text-amber-700">
             {loading ? '…' : pendingProposals}
           </p>
@@ -110,7 +136,7 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Pending Escrow Transactions Card */}
+        {/* Escrow Holds Card */}
         <Card className="p-5">
           <p className="text-xs font-semibold text-steel-600">Escrow Holds</p>
           <p className="mt-3 text-3xl font-bold text-emerald-700">
