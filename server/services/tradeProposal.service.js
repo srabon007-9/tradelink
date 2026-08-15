@@ -87,13 +87,26 @@ const tradeProposalService = {
       throw ApiError.badRequest('Proposed session time must be a valid date in the future');
     }
 
-    // Cap the redemption against the requester's actual balance and the
-    // max-discount-percent rule — never trust the requested amount as-is.
+    const requestedCredits = Math.max(0, Number(creditsToRedeem) || 0);
+
     const redemption = await creditWalletService.previewRedemption(
       requesterId,
       priceAtProposal,
-      creditsToRedeem || 0
+      requestedCredits
     );
+
+    if (requestedCredits > 0) {
+      if (requestedCredits > redemption.walletBalance) {
+        throw ApiError.badRequest(
+          `Insufficient credits: You requested ${requestedCredits} credit${requestedCredits !== 1 ? 's' : ''} but only have ${redemption.walletBalance} available in your wallet.`
+        );
+      }
+      if (requestedCredits > redemption.maxCreditsAllowed) {
+        throw ApiError.badRequest(
+          `Discount cap exceeded: You can only redeem up to ${redemption.maxCreditsAllowed} credit${redemption.maxCreditsAllowed !== 1 ? 's' : ''} on this trade (max 20% discount).`
+        );
+      }
+    }
 
     const proposal = await TradeProposal.create({
       listing: listing._id,

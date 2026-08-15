@@ -158,13 +158,26 @@ const BrowseSkills = () => {
       return;
     }
 
+    const creditsNum = Number(bookingCredits) || 0;
+    const currentBalance = walletBalance ?? 0;
+    if (creditsNum > 0) {
+      if (creditsNum > currentBalance) {
+        setBookingError(`Insufficient credits: You requested ${creditsNum} credit${creditsNum !== 1 ? 's' : ''} but only have ${currentBalance} available in your wallet.`);
+        return;
+      }
+      if (bookingPreview && creditsNum > bookingPreview.maxCreditsAllowed) {
+        setBookingError(`Discount cap exceeded: You can only redeem up to ${bookingPreview.maxCreditsAllowed} credit${bookingPreview.maxCreditsAllowed !== 1 ? 's' : ''} on this trade (max 20% discount).`);
+        return;
+      }
+    }
+
     setBookingSubmitting(true);
     try {
       await api.post('/trade-proposals', {
         listingId,
         proposedSessionAt: new Date(bookingDate).toISOString(),
         message: bookingMessage.trim() || undefined,
-        creditsToRedeem: Number(bookingCredits) || 0,
+        creditsToRedeem: creditsNum,
       });
       setBookedIds(prev => new Set(prev).add(listingId));
       setBookingOpenId(null);
