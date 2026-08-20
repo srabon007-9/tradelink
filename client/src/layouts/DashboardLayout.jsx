@@ -80,10 +80,20 @@ const DashboardLayout = () => {
                 }`
               }
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded border border-concrete-200 bg-white text-xs">
-                {link.icon}
-              </span>
-              {link.label}
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${
+                      isActive
+                        ? 'border-white/30 bg-white/15 text-white'
+                        : 'border-concrete-200 bg-white text-steel-700'
+                    }`}
+                  >
+                    {link.icon}
+                  </span>
+                  {link.label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
