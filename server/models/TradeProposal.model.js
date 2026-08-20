@@ -21,6 +21,12 @@
  * The requester may redeem Credit Wallet credits at proposal time to
  * discount priceAtProposal down to finalPriceBDT (see
  * creditWallet.service.js and tradeProposal.service.js's createProposal).
+ *
+ * Time-Decay Rush Pricing: marking a proposal urgent adds a surcharge
+ * that grows the closer proposedSessionAt is to the moment of proposing
+ * (see rushPricing.service.js). The surcharge is applied to
+ * priceAtProposal before any credit discount, so it's part of what the
+ * escrow Transaction actually holds.
  */
 
 const mongoose = require('mongoose');
@@ -56,6 +62,13 @@ const TradeProposalSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+
+    // Time-Decay Rush Pricing — set when the requester marks the trade
+    // urgent. rushMultiplier/rushSurchargeBDT default to "no surcharge"
+    // so every existing/non-urgent proposal behaves exactly as before.
+    isUrgent: { type: Boolean, default: false },
+    rushMultiplier: { type: Number, default: 1, min: 1 },
+    rushSurchargeBDT: { type: Number, default: 0, min: 0 },
 
     // Credit Wallet System — credits the requester redeemed toward this
     // trade's cost (see creditWallet.service.js), and the resulting

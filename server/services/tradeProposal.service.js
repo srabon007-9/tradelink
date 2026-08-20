@@ -24,6 +24,12 @@
  * priceAtProposal. If the proposal never becomes a real trade (declined or
  * cancelled), any redeemed credits are refunded — they were only ever
  * meant to discount a trade that actually happens.
+ *
+ * A requester can also mark a proposal urgent, adding a Time-Decay Rush
+ * Pricing surcharge (see rushPricing.service.js) computed from how soon
+ * proposedSessionAt is — that surcharge is applied to priceAtProposal
+ * BEFORE the credit discount, so a bigger (rush-adjusted) price also
+ * unlocks a bigger absolute discount under the same percentage cap.
  */
 
 const TradeProposal = require('../models/TradeProposal.model');
@@ -34,6 +40,7 @@ const valuationService = require('./valuation.service');
 const googleCalendarService = require('./googleCalendar.service');
 const transactionService = require('./transaction.service');
 const creditWalletService = require('./creditWallet.service');
+const rushPricingService = require('./rushPricing.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -77,11 +84,12 @@ const refundRedeemedCredits = async proposal => {
 const tradeProposalService = {
   /**
    * Propose a trade: book a listing's session at its current live price,
-   * optionally redeeming wallet credits to discount that price.
+   * optionally marked urgent (Time-Decay Rush Pricing surcharge) and/or
+   * redeeming wallet credits to discount the resulting price.
    * @param {string} requesterId
-   * @param {{ listingId: string, proposedSessionAt: string, message?: string, creditsToRedeem?: number }} data
+   * @param {{ listingId: string, proposedSessionAt: string, message?: string, creditsToRedeem?: number, isUrgent?: boolean }} data
    */
-  createProposal: async (requesterId, { listingId, proposedSessionAt, message, creditsToRedeem }) => {
+  createProposal: async (requesterId, { listingId, proposedSessionAt, message, creditsToRedeem, isUrgent }) => {
     const listing = await SkillListing.findById(listingId);
     if (!listing) {throw ApiError.notFound('Skill listing not found');}
     if (listing.status !== 'active') {
@@ -103,11 +111,19 @@ const tradeProposalService = {
       throw ApiError.badRequest('Proposed session time must be a valid date in the future');
     }
 
+    // Time-Decay Rush Pricing — proposedSessionAt doubles as the
+    // "deadline" the surcharge decays against. Never touches the
+    // valuation engine's own price, only adds on top of it.
+    const rush = isUrgent
+      ? rushPricingService.applyRushPricing(priceAtProposal, sessionDate)
+      : { rushMultiplier: 1, rushSurchargeBDT: 0, priceWithRushBDT: priceAtProposal };
+    const priceAfterRush = rush.priceWithRushBDT;
+
     const requestedCredits = Math.max(0, Number(creditsToRedeem) || 0);
 
     const redemption = await creditWalletService.previewRedemption(
       requesterId,
-      priceAtProposal,
+      priceAfterRush,
       requestedCredits
     );
 
@@ -131,6 +147,9 @@ const tradeProposalService = {
       listingTitle: listing.title,
       category: listing.category,
       priceAtProposal,
+      isUrgent: Boolean(isUrgent),
+      rushMultiplier: rush.rushMultiplier,
+      rushSurchargeBDT: rush.rushSurchargeBDT,
       creditsRedeemed: redemption.creditsApplied,
       discountBDT: redemption.discountBDT,
       finalPriceBDT: redemption.finalPriceBDT,
@@ -202,6 +221,9 @@ const tradeProposalService = {
       description:
         `Skill exchange session between ${requester.name} and ${provider.name} via TradeLink.\n` +
         `Agreed price: ৳${proposal.finalPriceBDT} BDT` +
+        (proposal.isUrgent && proposal.rushSurchargeBDT > 0
+          ? ` (includes ৳${proposal.rushSurchargeBDT} rush surcharge, ×${proposal.rushMultiplier})`
+          : '') +
         (proposal.creditsRedeemed > 0
           ? ` (৳${proposal.priceAtProposal} less ${proposal.creditsRedeemed} redeemed credits).`
           : '.') +

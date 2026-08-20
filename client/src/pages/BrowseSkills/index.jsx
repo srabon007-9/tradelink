@@ -81,6 +81,8 @@ const BrowseSkills = () => {
   const [bookingDate, setBookingDate] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
   const [bookingCredits, setBookingCredits] = useState('');
+  const [bookingIsUrgent, setBookingIsUrgent] = useState(false);
+  const [rushPreview, setRushPreview] = useState(null);
   const [bookingPreview, setBookingPreview] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
@@ -116,7 +118,31 @@ const BrowseSkills = () => {
       .catch(() => setWalletBalance(null));
   }, [isLoggedIn]);
 
+  // Live Time-Decay Rush Pricing preview — only once urgent is checked and
+  // a session time is chosen, debounced.
+  useEffect(() => {
+    if (!bookingOpenId || !bookingIsUrgent || !bookingDate) {
+      setRushPreview(null);
+      return undefined;
+    }
+    const listing = listings.find(l => l._id === bookingOpenId);
+    if (!listing || listing.currentPriceBDT == null) return undefined;
+
+    const t = setTimeout(() => {
+      api
+        .get('/trade-proposals/rush-preview', {
+          params: { priceBDT: listing.currentPriceBDT, deadline: new Date(bookingDate).toISOString() },
+        })
+        .then(res => setRushPreview(res.data.data))
+        .catch(() => setRushPreview(null));
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [bookingOpenId, bookingIsUrgent, bookingDate, listings]);
+
   // Live discount preview for whichever booking form is open, debounced.
+  // Uses the rush-adjusted price (if urgent) so the credit cap and final
+  // price both reflect the true cost, not the pre-surcharge base price.
   useEffect(() => {
     if (!bookingOpenId) {
       setBookingPreview(null);
@@ -125,17 +151,19 @@ const BrowseSkills = () => {
     const listing = listings.find(l => l._id === bookingOpenId);
     if (!listing || listing.currentPriceBDT == null) return undefined;
 
+    const effectivePrice = bookingIsUrgent && rushPreview ? rushPreview.priceWithRushBDT : listing.currentPriceBDT;
+
     const t = setTimeout(() => {
       api
         .get('/wallet/preview-redemption', {
-          params: { price: listing.currentPriceBDT, credits: Number(bookingCredits) || 0 },
+          params: { price: effectivePrice, credits: Number(bookingCredits) || 0 },
         })
         .then(res => setBookingPreview(res.data.data))
         .catch(() => setBookingPreview(null));
     }, 250);
 
     return () => clearTimeout(t);
-  }, [bookingOpenId, bookingCredits, listings]);
+  }, [bookingOpenId, bookingCredits, bookingIsUrgent, rushPreview, listings]);
 
   const totalListings = categories.reduce((sum, c) => sum + (c.listingCount || 0), 0);
 
@@ -144,6 +172,8 @@ const BrowseSkills = () => {
     setBookingDate('');
     setBookingMessage('');
     setBookingCredits('');
+    setBookingIsUrgent(false);
+    setRushPreview(null);
     setBookingPreview(null);
     setBookingError('');
   };
@@ -180,6 +210,7 @@ const BrowseSkills = () => {
         proposedSessionAt: new Date(bookingDate).toISOString(),
         message: bookingMessage.trim() || undefined,
         creditsToRedeem: creditsNum,
+        isUrgent: bookingIsUrgent,
       });
       setBookedIds(prev => new Set(prev).add(listingId));
       setBookingOpenId(null);
@@ -333,6 +364,37 @@ const BrowseSkills = () => {
                         onChange={val => setBookingDate(val)}
                       />
                     </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-medium text-steel-700">
+                        <input
+                          id={`session-urgent-${listing._id}`}
+                          type="checkbox"
+                          checked={bookingIsUrgent}
+                          onChange={e => setBookingIsUrgent(e.target.checked)}
+                          className="h-4 w-4 rounded border-concrete-300 text-navy-800 focus:ring-navy-700"
+                        />
+                        ⚡ Mark as urgent (rush pricing may apply)
+                      </label>
+                      {bookingIsUrgent && (
+                        <p className="mt-1.5 text-xs text-steel-500">
+                          {!bookingDate ? (
+                            'Choose a session time above to see the rush surcharge.'
+                          ) : rushPreview && rushPreview.rushSurchargeBDT > 0 ? (
+                            <>
+                              Rush surcharge: +{formatCurrency(rushPreview.rushSurchargeBDT)} (×
+                              {rushPreview.rushMultiplier.toFixed(2)}) → {formatCurrency(rushPreview.priceWithRushBDT)}{' '}
+                              before any credit discount. The sooner the session, the higher the surcharge.
+                            </>
+                          ) : rushPreview ? (
+                            "This session is far enough out that no rush surcharge applies."
+                          ) : (
+                            'Calculating rush surcharge…'
+                          )}
+                        </p>
+                      )}
+                    </div>
+
                     <textarea
                       rows={2}
                       placeholder="Optional message to the provider"

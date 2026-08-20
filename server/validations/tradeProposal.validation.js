@@ -4,7 +4,7 @@
  * validations/tradeProposal.validation.js — Trade Proposal Input Validation
  */
 
-const { body, param, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -36,6 +36,11 @@ const validateCreateProposal = [
     .isInt({ min: 0 })
     .withMessage('Credits to redeem must be a non-negative whole number'),
 
+  body('isUrgent')
+    .optional()
+    .isBoolean()
+    .withMessage('isUrgent must be true or false'),
+
   validate,
 ];
 
@@ -44,4 +49,10 @@ const validateProposalId = [
   validate,
 ];
 
-module.exports = { validateCreateProposal, validateProposalId };
+const validateRushPreview = [
+  query('priceBDT').isFloat({ min: 0 }).withMessage('A valid price is required'),
+  query('deadline').isISO8601().withMessage('A valid deadline date/time is required'),
+  validate,
+];
+
+module.exports = { validateCreateProposal, validateProposalId, validateRushPreview };

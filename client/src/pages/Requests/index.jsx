@@ -47,18 +47,30 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
         </div>
         <div className="text-right">
           <p className="text-lg font-bold text-navy-900">{formatCurrency(proposal.finalPriceBDT)}</p>
+          {proposal.rushSurchargeBDT > 0 && (
+            <p className="text-xs text-amber-600">
+              <span className="line-through">{formatCurrency(proposal.priceAtProposal)}</span>{' '}
+              +{formatCurrency(proposal.rushSurchargeBDT)} rush (×{proposal.rushMultiplier})
+            </p>
+          )}
           {proposal.creditsRedeemed > 0 && (
             <p className="text-xs text-steel-500">
-              <span className="line-through">{formatCurrency(proposal.priceAtProposal)}</span>{' '}
               −{formatCurrency(proposal.discountBDT)} ({proposal.creditsRedeemed} credit
-              {proposal.creditsRedeemed !== 1 ? 's' : ''})
+              {proposal.creditsRedeemed !== 1 ? 's' : ''} redeemed)
             </p>
           )}
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-1 text-sm text-steel-600 sm:grid-cols-2">
-        <p>Proposed session: {formatDateTime(proposal.proposedSessionAt)}</p>
+        <p>
+          Proposed session: {formatDateTime(proposal.proposedSessionAt)}
+          {proposal.isUrgent && (
+            <Badge color="yellow" className="ml-2">
+              Urgent
+            </Badge>
+          )}
+        </p>
         <p>Sent {formatDate(proposal.createdAt)}</p>
       </div>
 
