@@ -18,28 +18,38 @@ import api from '../../services/api';
 import { ROUTES } from '../../constants';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
+const TIER_COLORS = {
+  gold:  'bg-amber-50 text-amber-700 border-amber-200',
+  green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  blue:  'bg-blue-50 text-blue-700 border-blue-200',
+  red:   'bg-red-50 text-red-700 border-red-200',
+};
+
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const [wallet, setWallet] = useState({ balance: 0, entries: [] });
   const [myListings, setMyListings] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [proposals, setProposals] = useState([]);
+  const [reputation, setReputation] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [walletRes, listingsRes, txRes, propRes] = await Promise.all([
+      const [walletRes, listingsRes, txRes, propRes, repRes] = await Promise.all([
         api.get('/wallet/mine').catch(() => ({ data: { data: { balance: 0, entries: [] } } })),
         api.get('/skill-listings/mine').catch(() => ({ data: { data: [] } })),
         api.get('/transactions/mine').catch(() => ({ data: { data: [] } })),
         api.get('/trade-proposals/received').catch(() => ({ data: { data: [] } })),
+        api.get('/reputation/me').catch(() => ({ data: { data: null } })),
       ]);
 
       setWallet(walletRes.data.data || { balance: 0, entries: [] });
       setMyListings(listingsRes.data.data || []);
       setTransactions(txRes.data.data || []);
       setProposals(propRes.data.data || []);
+      setReputation(repRes.data.data || null);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -90,7 +100,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── Live Stat Cards ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
         {/* Credit Balance Card */}
         <Card className="p-5 border-l-4 border-l-navy-900 bg-navy-50/40">
           <div className="flex items-center justify-between">
@@ -146,6 +156,31 @@ const Dashboard = () => {
             <span>Pending confirmation</span>
             <Link to={ROUTES.TRANSACTIONS} className="font-semibold text-navy-800 hover:underline">
               Transactions →
+            </Link>
+          </div>
+        </Card>
+
+        {/* My Trust Score Card */}
+        <Card className="p-5 border-l-4 border-l-accent-700 bg-amber-50/30">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-accent-800">Trust Score</p>
+            {reputation && (
+              <span
+                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold border ${
+                  TIER_COLORS[reputation.tierColor] || TIER_COLORS.red
+                }`}
+              >
+                {reputation.tier}
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-3xl font-extrabold text-slate-950">
+            {loading ? '…' : reputation ? reputation.score : '—'}
+          </p>
+          <div className="mt-3 flex items-center justify-between text-xs text-steel-600">
+            <span>{reputation ? `${reputation.breakdown.totalReviews} reviews` : 'No data'}</span>
+            <Link to="/dashboard/reviews" className="font-semibold text-navy-800 hover:underline">
+              Leaderboard →
             </Link>
           </div>
         </Card>

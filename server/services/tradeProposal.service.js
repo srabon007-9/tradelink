@@ -92,7 +92,7 @@ const tradeProposalService = {
     }
 
     const priceAtProposal = await getLivePrice(listing.category);
-    if (priceAtProposal == null) {
+    if (priceAtProposal === null || priceAtProposal === undefined) {
       throw ApiError.badRequest(
         "This skill isn't priced by the valuation engine yet, so trade proposals aren't available for it."
       );

@@ -22,6 +22,7 @@ const categoryBrowsingRoutes = require('./categoryBrowsing.routes');
 const tradeProposalRoutes    = require('./tradeProposal.routes');
 const transactionRoutes      = require('./transaction.routes');
 const creditWalletRoutes     = require('./creditWallet.routes');
+const reputationRoutes       = require('./reputation.routes');
 
 const router = express.Router();
 
@@ -37,5 +38,6 @@ router.use('/browse',          categoryBrowsingRoutes);
 router.use('/trade-proposals', tradeProposalRoutes);
 router.use('/transactions',    transactionRoutes);
 router.use('/wallet',          creditWalletRoutes);
+router.use('/reputation',      reputationRoutes);
 
 module.exports = router;
