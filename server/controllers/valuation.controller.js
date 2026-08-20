@@ -34,7 +34,7 @@ const valuationController = {
   getCategory: async (req, res, next) => {
     try {
       const category = await SkillCategory.findOne({ slug: req.params.slug }).lean();
-      if (!category) throw ApiError.notFound(`Skill category '${req.params.slug}' not found`);
+      if (!category) {throw ApiError.notFound(`Skill category '${req.params.slug}' not found`);}
 
       const history = await ValuationSnapshot
         .find({ category: category._id })

@@ -104,7 +104,7 @@ const creditWalletService = {
 
   /** Award credits (e.g. on trade completion). */
   earnCredits: async (userId, amount, reason, { relatedTransaction } = {}) => {
-    if (amount <= 0) return null;
+    if (amount <= 0) {return null;}
 
     const wallet = await getOrCreateWallet(userId);
     wallet.balance += amount;
@@ -128,7 +128,7 @@ const creditWalletService = {
    * against the current balance — never trust a client-supplied amount.
    */
   redeemCredits: async (userId, amount, reason, { relatedTradeProposal } = {}) => {
-    if (amount <= 0) return null;
+    if (amount <= 0) {return null;}
 
     const wallet = await getOrCreateWallet(userId);
     if (wallet.balance < amount) {

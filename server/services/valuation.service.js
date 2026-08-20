@@ -107,7 +107,7 @@ const computeValue = ({ demand, supply, baseRate, alpha, floor, ceiling }) => {
  */
 const recalculateCategory = async (categoryId, trigger = 'event') => {
   const category = await SkillCategory.findById(categoryId);
-  if (!category) throw new Error(`SkillCategory ${categoryId} not found`);
+  if (!category) {throw new Error(`SkillCategory ${categoryId} not found`);}
 
   const { demand, supply, baseRate, alpha, floor, ceiling } = category;
   const result = computeValue({ demand, supply, baseRate, alpha, floor, ceiling });
@@ -184,13 +184,13 @@ const recalculateAll = async (trigger = 'scheduled') => {
  * @param {1|-1}   delta  - +1 provider joined, -1 provider left
  */
 const updateSupply = async (slug, delta) => {
-  let category = await SkillCategory.findOneAndUpdate(
+  const category = await SkillCategory.findOneAndUpdate(
     { slug },
     { $inc: { supply: delta } },
     { new: true }
   );
 
-  if (!category) throw new Error(`SkillCategory with slug '${slug}' not found`);
+  if (!category) {throw new Error(`SkillCategory with slug '${slug}' not found`);}
 
   // Guard: supply must never go below 0
   if (category.supply < 0) {
@@ -209,13 +209,13 @@ const updateSupply = async (slug, delta) => {
  * @param {1|-1}   delta  - +1 request opened, -1 request closed/cancelled
  */
 const updateDemand = async (slug, delta) => {
-  let category = await SkillCategory.findOneAndUpdate(
+  const category = await SkillCategory.findOneAndUpdate(
     { slug },
     { $inc: { demand: delta } },
     { new: true }
   );
 
-  if (!category) throw new Error(`SkillCategory with slug '${slug}' not found`);
+  if (!category) {throw new Error(`SkillCategory with slug '${slug}' not found`);}
 
   // Guard: demand must never go below 0
   if (category.demand < 0) {

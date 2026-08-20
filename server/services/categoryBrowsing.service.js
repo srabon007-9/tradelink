@@ -80,7 +80,7 @@ const getCategorySummary = async () => {
  */
 const getListings = async ({ category, search, sort = 'newest' } = {}) => {
   const query = { status: 'active' };
-  if (category) query.category = category.toLowerCase();
+  if (category) {query.category = category.toLowerCase();}
 
   if (search && search.trim()) {
     const re = new RegExp(escapeRegex(search.trim()), 'i');
@@ -120,9 +120,9 @@ const getListings = async ({ category, search, sort = 'newest' } = {}) => {
     const direction = sort === 'price_asc' ? 1 : -1;
     listings.sort((a, b) => {
       // Untracked ('other') listings have no live price — always sort last.
-      if (a.currentPriceBDT == null && b.currentPriceBDT == null) return 0;
-      if (a.currentPriceBDT == null) return 1;
-      if (b.currentPriceBDT == null) return -1;
+      if (a.currentPriceBDT == null && b.currentPriceBDT == null) {return 0;}
+      if (a.currentPriceBDT == null) {return 1;}
+      if (b.currentPriceBDT == null) {return -1;}
       return (a.currentPriceBDT - b.currentPriceBDT) * direction;
     });
   }

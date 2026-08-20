@@ -21,7 +21,9 @@
  * A requester can redeem Credit Wallet credits when proposing a trade to
  * discount its cost (see creditWallet.service.js) — the escrow that later
  * opens on acceptance holds the discounted finalPriceBDT, not the raw
- * priceAtProposal.
+ * priceAtProposal. If the proposal never becomes a real trade (declined or
+ * cancelled), any redeemed credits are refunded — they were only ever
+ * meant to discount a trade that actually happens.
  */
 
 const TradeProposal = require('../models/TradeProposal.model');
@@ -41,19 +43,33 @@ const SESSION_DURATION_MINUTES = 60;
 
 /** The live valuation-engine price for a category right now, or null if untracked. */
 const getLivePrice = async category => {
-  if (category === 'other') return null;
+  if (category === 'other') {return null;}
   const categoryDoc = await SkillCategory.findOne({ slug: category }).select('priceBDT').lean();
   return categoryDoc ? categoryDoc.priceBDT : null;
 };
 
 /** Best-effort demand adjustment — a proposal's lifecycle shouldn't fail on a valuation hiccup. */
 const adjustDemand = async (category, delta) => {
-  if (!category || category === 'other') return;
+  if (!category || category === 'other') {return;}
   try {
     await valuationService.updateDemand(category, delta);
   } catch (err) {
     logger.error(`[TradeProposal] Failed to adjust demand for '${category}' (${delta}): ${err.message}`);
   }
+};
+
+/**
+ * Redeemed credits were only ever meant to discount a trade that actually
+ * happens — if the proposal falls through (declined/cancelled) before that,
+ * give them back rather than letting them vanish.
+ */
+const refundRedeemedCredits = async proposal => {
+  if (!proposal.creditsRedeemed) {return;}
+  await creditWalletService.earnCredits(
+    proposal.requester,
+    proposal.creditsRedeemed,
+    `Refund: trade proposal for "${proposal.listingTitle}" was ${proposal.status}`
+  );
 };
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -67,7 +83,7 @@ const tradeProposalService = {
    */
   createProposal: async (requesterId, { listingId, proposedSessionAt, message, creditsToRedeem }) => {
     const listing = await SkillListing.findById(listingId);
-    if (!listing) throw ApiError.notFound('Skill listing not found');
+    if (!listing) {throw ApiError.notFound('Skill listing not found');}
     if (listing.status !== 'active') {
       throw ApiError.badRequest('This listing is not currently active');
     }
@@ -154,7 +170,7 @@ const tradeProposalService = {
     const proposal = await TradeProposal.findById(id)
       .populate('requester', 'name email avatar')
       .populate('provider', 'name email avatar');
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.requester._id.toString() !== userId && proposal.provider._id.toString() !== userId) {
       throw ApiError.forbidden('You are not part of this trade proposal');
     }
@@ -168,7 +184,7 @@ const tradeProposalService = {
    */
   acceptProposal: async (id, providerId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.provider.toString() !== providerId) {
       throw ApiError.forbidden('Only the provider can accept this proposal');
     }
@@ -215,7 +231,7 @@ const tradeProposalService = {
 
   declineProposal: async (id, providerId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.provider.toString() !== providerId) {
       throw ApiError.forbidden('Only the provider can decline this proposal');
     }
@@ -226,13 +242,14 @@ const tradeProposalService = {
     proposal.status = 'declined';
     await proposal.save();
     await adjustDemand(proposal.category, -1);
+    await refundRedeemedCredits(proposal);
 
     return proposal;
   },
 
   cancelProposal: async (id, requesterId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.requester.toString() !== requesterId) {
       throw ApiError.forbidden('Only the requester can cancel this proposal');
     }
@@ -243,6 +260,7 @@ const tradeProposalService = {
     proposal.status = 'cancelled';
     await proposal.save();
     await adjustDemand(proposal.category, -1);
+    await refundRedeemedCredits(proposal);
 
     return proposal;
   },

@@ -24,7 +24,7 @@ const logger = require('../utils/logger');
  * existing SkillCategory. Throws ApiError.badRequest otherwise.
  */
 const resolveCategory = async category => {
-  if (category === 'other') return null;
+  if (category === 'other') {return null;}
 
   const categoryDoc = await SkillCategory.findOne({ slug: category });
   if (!categoryDoc) {
@@ -37,7 +37,7 @@ const resolveCategory = async category => {
 
 /** Best-effort supply adjustment — a listing's lifecycle shouldn't fail on a valuation hiccup. */
 const adjustSupply = async (category, delta) => {
-  if (!category || category === 'other') return;
+  if (!category || category === 'other') {return;}
   try {
     await valuationService.updateSupply(category, delta);
   } catch (err) {
@@ -85,7 +85,7 @@ const skillListingService = {
   /** Public browse — active listings only, optionally filtered by category. */
   getActiveListings: async ({ category } = {}) => {
     const query = { status: 'active' };
-    if (category) query.category = category.toLowerCase();
+    if (category) {query.category = category.toLowerCase();}
 
     const listings = await SkillListing.find(query)
       .populate('user', 'name avatar')
@@ -98,7 +98,7 @@ const skillListingService = {
   /** Single listing by id, with the live valuation-engine price attached. */
   getListingById: async id => {
     const listing = await SkillListing.findById(id).populate('user', 'name avatar').lean();
-    if (!listing) throw ApiError.notFound('Skill listing not found');
+    if (!listing) {throw ApiError.notFound('Skill listing not found');}
     return withLivePrice(listing);
   },
 
@@ -108,7 +108,7 @@ const skillListingService = {
    */
   updateListing: async (id, userId, updates) => {
     const listing = await SkillListing.findById(id);
-    if (!listing) throw ApiError.notFound('Skill listing not found');
+    if (!listing) {throw ApiError.notFound('Skill listing not found');}
     if (listing.user.toString() !== userId) {
       throw ApiError.forbidden('You can only edit your own listings');
     }
@@ -125,9 +125,9 @@ const skillListingService = {
       listing.customCategoryName = updates.customCategoryName;
     }
 
-    if ('title' in updates) listing.title = updates.title;
-    if ('description' in updates) listing.description = updates.description;
-    if ('status' in updates) listing.status = updates.status;
+    if ('title' in updates) {listing.title = updates.title;}
+    if ('description' in updates) {listing.description = updates.description;}
+    if ('status' in updates) {listing.status = updates.status;}
 
     await listing.save();
 
@@ -135,8 +135,8 @@ const skillListingService = {
     const isSupply = listing.status === 'active';
 
     if (prevCategory !== listing.category) {
-      if (wasSupply) await adjustSupply(prevCategory, -1);
-      if (isSupply) await adjustSupply(listing.category, 1);
+      if (wasSupply) {await adjustSupply(prevCategory, -1);}
+      if (isSupply) {await adjustSupply(listing.category, 1);}
     } else if (wasSupply !== isSupply) {
       await adjustSupply(listing.category, isSupply ? 1 : -1);
     }
@@ -147,7 +147,7 @@ const skillListingService = {
   /** Delete a listing (owner only) — releases its supply slot if it was active. */
   deleteListing: async (id, userId) => {
     const listing = await SkillListing.findById(id);
-    if (!listing) throw ApiError.notFound('Skill listing not found');
+    if (!listing) {throw ApiError.notFound('Skill listing not found');}
     if (listing.user.toString() !== userId) {
       throw ApiError.forbidden('You can only delete your own listings');
     }

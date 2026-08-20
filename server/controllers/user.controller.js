@@ -51,11 +51,11 @@ const userController = {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-      if ('name' in req.body) user.name = name;
-      if ('bio' in req.body) user.bio = bio;
-      if ('company' in req.body) user.company = company;
-      if ('phone' in req.body) user.phone = phone;
-      if ('avatar' in req.body) user.avatar = avatar;
+      if ('name' in req.body) {user.name = name;}
+      if ('bio' in req.body) {user.bio = bio;}
+      if ('company' in req.body) {user.company = company;}
+      if ('phone' in req.body) {user.phone = phone;}
+      if ('avatar' in req.body) {user.avatar = avatar;}
 
       await user.save();
 

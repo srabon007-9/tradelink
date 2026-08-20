@@ -22,7 +22,7 @@ const validate = (req, res, next) => {
 
 // A category is valid if it's the literal 'other' or the slug of a seeded SkillCategory.
 const isKnownCategoryOrOther = async value => {
-  if (value === 'other') return true;
+  if (value === 'other') {return true;}
   const exists = await SkillCategory.exists({ slug: value });
   if (!exists) {
     throw new Error(`'${value}' is not a known skill category — choose a listed category or 'other'`);
