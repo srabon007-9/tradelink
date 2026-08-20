@@ -12,6 +12,7 @@ export const ROUTES = {
   BROWSE: '/dashboard/browse',
   PUBLIC_BROWSE: '/browse',
   DASHBOARD: '/dashboard',
+  PROFILE: '/dashboard/profile',
   MY_SKILLS: '/dashboard/skills',
   WALLET: '/dashboard/wallet',
   TRANSACTIONS: '/dashboard/transactions',

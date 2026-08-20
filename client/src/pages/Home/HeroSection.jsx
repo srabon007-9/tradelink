@@ -9,8 +9,9 @@ import useAuth from '../../hooks/useAuth';
 import { ROUTES } from '../../constants';
 
 const HeroSection = () => {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const [memberCount, setMemberCount] = useState(null);
+  const profileButtonLabel = user?.name || (user?.role ? `${user.role} Profile` : 'My Profile');
 
   useEffect(() => {
     api.get('/users')
@@ -93,15 +94,26 @@ const HeroSection = () => {
         {/* ── Lower Middle Hero Action Button ──────────────────────────────── */}
         <div className="mt-12 flex flex-col items-center justify-center gap-4 border-t border-concrete-200 pt-10 text-center sm:flex-row">
           {isLoggedIn ? (
-            <Link
-              to={ROUTES.DASHBOARD}
-              className="inline-flex items-center justify-center gap-3 rounded-xl bg-navy-900 px-10 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:bg-navy-800 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <span>Go to Member Dashboard</span>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link
+                to={ROUTES.DASHBOARD}
+                className="inline-flex items-center justify-center gap-3 rounded-xl bg-navy-900 px-8 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:bg-navy-800 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <span>Go to Member Dashboard</span>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+              <Link
+                to={ROUTES.PROFILE}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-navy-800 bg-white px-8 py-4 text-base font-semibold text-navy-900 shadow-sm transition-all duration-200 hover:bg-navy-50 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <svg className="h-5 w-5 text-navy-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>{profileButtonLabel}</span>
+              </Link>
+            </div>
           ) : (
             <>
               <Link

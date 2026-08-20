@@ -27,7 +27,7 @@ const transactionService = {
    */
   createForProposal: async proposal => {
     const existing = await Transaction.findOne({ tradeProposal: proposal._id });
-    if (existing) return existing; // safety net — a proposal only ever gets accepted once
+    if (existing) {return existing;} // safety net — a proposal only ever gets accepted once
 
     const transaction = await Transaction.create({
       tradeProposal: proposal._id,
@@ -59,7 +59,7 @@ const transactionService = {
     const transaction = await Transaction.findById(id)
       .populate('requester', 'name email avatar')
       .populate('provider', 'name email avatar');
-    if (!transaction) throw ApiError.notFound('Transaction not found');
+    if (!transaction) {throw ApiError.notFound('Transaction not found');}
 
     if (transaction.requester._id.toString() !== userId && transaction.provider._id.toString() !== userId) {
       throw ApiError.forbidden('You are not part of this transaction');
@@ -73,7 +73,7 @@ const transactionService = {
    */
   confirmCompletion: async (id, userId) => {
     const transaction = await Transaction.findById(id);
-    if (!transaction) throw ApiError.notFound('Transaction not found');
+    if (!transaction) {throw ApiError.notFound('Transaction not found');}
 
     const isRequester = transaction.requester.toString() === userId;
     const isProvider = transaction.provider.toString() === userId;

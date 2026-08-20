@@ -4,15 +4,20 @@
  * Displays the logged-in member's profile and provides an interactive form
  * to update name, bio, company, phone, and avatar. Profile updates are
  * persisted to MongoDB and synced immediately across the app state.
+ *
+ * Includes a Reputation Score section below the profile card showing trust
+ * score, tier badge, completion rate, average rating, and full breakdown.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useAuth from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import ReputationBadge from '../../components/common/ReputationBadge';
+import api from '../../services/api';
 import { getInitials, formatDate } from '../../utils/formatters';
 
 const ROLE_COLORS = {
@@ -28,6 +33,18 @@ const Field = ({ label, value }) => (
   </div>
 );
 
+const StarDisplay = ({ rating, max = 5 }) => {
+  const stars = [];
+  for (let i = 1; i <= max; i++) {
+    stars.push(
+      <span key={i} className={i <= Math.floor(rating) ? 'text-amber-400' : 'text-concrete-300'}>
+        ★
+      </span>
+    );
+  }
+  return <span className="inline-flex gap-0.5 text-lg">{stars}</span>;
+};
+
 const Profile = () => {
   const { user, updateProfile } = useAuth();
   const { addToast } = useToast();
@@ -41,6 +58,18 @@ const Profile = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+
+  // Reputation data
+  const [reputation, setReputation] = useState(null);
+  const [repLoading, setRepLoading] = useState(true);
+  const [repExpanded, setRepExpanded] = useState(false);
+
+  useEffect(() => {
+    api.get('/reputation/me')
+      .then(res => setReputation(res.data.data))
+      .catch(() => setReputation(null))
+      .finally(() => setRepLoading(false));
+  }, []);
 
   if (!user) {
     return (
@@ -288,8 +317,143 @@ const Profile = () => {
           </>
         )}
       </Card>
+
+      {/* ── Reputation Score Section ──────────────────────────────────── */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <span className="eyebrow mb-1">Trust & Reputation</span>
+            <h2 className="text-lg font-semibold text-slate-950">Reputation Score</h2>
+          </div>
+          {reputation && (
+            <button
+              onClick={() => setRepExpanded(!repExpanded)}
+              className="text-xs font-semibold text-navy-800 hover:underline"
+            >
+              {repExpanded ? 'Hide Breakdown' : 'View Full Breakdown'}
+            </button>
+          )}
+        </div>
+
+        {repLoading ? (
+          <div className="flex justify-center py-8 text-sm text-steel-500">
+            Calculating reputation…
+          </div>
+        ) : !reputation ? (
+          <div className="py-8 text-center text-sm text-steel-500">
+            No reputation data available yet. Complete trades and receive reviews to build your score.
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:gap-10">
+            {/* Large score badge */}
+            <ReputationBadge
+              score={reputation.score}
+              tier={reputation.tier}
+              tierColor={reputation.tierColor}
+              breakdown={reputation.breakdown}
+              size="lg"
+              showBreakdown={false}
+            />
+
+            {/* Stats grid */}
+            <div className="flex-1 w-full space-y-5">
+              {/* Completion Rate */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-slate-700">Trade Completion Rate</span>
+                  <span className="text-sm font-bold text-slate-950">
+                    {reputation.breakdown.completionRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2.5 w-full rounded-full bg-concrete-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-navy-800 transition-all duration-700"
+                    style={{ width: `${reputation.breakdown.completionRate}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-steel-400">
+                  {reputation.breakdown.completedTrades} completed of {reputation.breakdown.totalTrades} total trades
+                </p>
+              </div>
+
+              {/* Average Rating */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-slate-700">Average Rating</span>
+                  <span className="text-sm font-bold text-slate-950">
+                    {reputation.breakdown.averageRating.toFixed(2)} / 5.00
+                  </span>
+                </div>
+                <StarDisplay rating={reputation.breakdown.averageRating} />
+                <p className="mt-1 text-xs text-steel-400">
+                  Based on {reputation.breakdown.totalReviews} reviews received
+                </p>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-4 rounded-lg border border-concrete-200 bg-concrete-50/50 p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-950">{reputation.breakdown.totalTrades}</p>
+                  <p className="text-xs text-steel-500">Total Trades</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-950">{reputation.breakdown.totalReviews}</p>
+                  <p className="text-xs text-steel-500">Reviews</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-950">{reputation.breakdown.disputePenalty}</p>
+                  <p className="text-xs text-steel-500">Disputes</p>
+                </div>
+              </div>
+
+              {/* Expandable full breakdown */}
+              {repExpanded && (
+                <div className="rounded-lg border border-concrete-200 bg-white p-4 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">Formula Breakdown</p>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded border border-concrete-100 p-3">
+                      <p className="text-xs text-steel-500">Completion (40%)</p>
+                      <p className="text-lg font-bold text-slate-950">
+                        {(reputation.breakdown.completionRate * 0.40).toFixed(1)}
+                      </p>
+                    </div>
+                    <div className="rounded border border-concrete-100 p-3">
+                      <p className="text-xs text-steel-500">Rating (40%)</p>
+                      <p className="text-lg font-bold text-slate-950">
+                        {(reputation.breakdown.averageRating > 0
+                          ? ((reputation.breakdown.averageRating - 1) / 4) * 100 * 0.40
+                          : 0
+                        ).toFixed(1)}
+                      </p>
+                    </div>
+                    <div className="rounded border border-concrete-100 p-3">
+                      <p className="text-xs text-steel-500">No Disputes (20%)</p>
+                      <p className="text-lg font-bold text-slate-950">
+                        {((100 - reputation.breakdown.disputePenalty) * 0.20).toFixed(1)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-concrete-200 bg-concrete-50 p-3">
+                    <p className="text-[11px] font-mono text-steel-600 leading-relaxed">
+                      Score = ({reputation.breakdown.completionRate.toFixed(1)} × 0.40) +
+                      (Rating_Score × 0.40) +
+                      ((100 − {reputation.breakdown.disputePenalty}) × 0.20) = <strong>{reputation.score}</strong>
+                    </p>
+                    <p className="mt-1 text-[10px] text-steel-400">
+                      Time-decay: W(t) = e<sup>−0.015 × days</sup> · Half-life ≈ 46 days
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
 
 export default Profile;
+

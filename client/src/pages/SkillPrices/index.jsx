@@ -1,12 +1,18 @@
 /**
- * pages/SkillPrices/index.jsx — Live Skill Market Prices
+ * pages/SkillPrices/index.jsx — Live Skill Market Prices + Historical Charts
  *
  * Shows all skill categories with their current BDT price,
  * demand, supply, and a live price direction indicator.
+ *
+ * Extended with:
+ *  - Accordion-style price history (click any row to expand SVG chart)
+ *  - Compare Skills section (dual-line comparison chart at the bottom)
  */
 
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
+import ValuationTrendChart from '../../components/charts/ValuationTrendChart';
+import ValuationComparisonChart from '../../components/charts/ValuationComparisonChart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,19 +42,29 @@ const SkillPrices = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [expandedSlug, setExpandedSlug] = useState(null);
 
   const load = () => {
     setLoading(true);
     api.get('/valuations')
       .then(res => {
-        setCategories(res.data.data);
+        const cats = res.data.data;
+        setCategories(cats);
         setLastUpdated(new Date());
+        // Default-expand the highest-priced category
+        if (cats.length > 0 && !expandedSlug) {
+          setExpandedSlug(cats[0].slug);
+        }
       })
       .catch(() => setCategories([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
+
+  const toggleExpand = (slug) => {
+    setExpandedSlug(prev => prev === slug ? null : slug);
+  };
 
   return (
     <div className="space-y-6">
@@ -100,12 +116,15 @@ const SkillPrices = () => {
         );
       })()}
 
-      {/* ── Main Table ─────────────────────────────────────────────── */}
+      {/* ── Main Table with Accordion Charts ──────────────────────── */}
       <section className="surface-card overflow-hidden">
         <div className="border-b border-concrete-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-950">All Skill Categories</h2>
           <p className="mt-1 text-sm text-steel-600">
             Price = base rate × ((demand + 1) ÷ (supply + 1))^0.5, clamped between floor and ceiling.
+            <span className="ml-2 text-xs text-steel-400 font-medium">
+              Click any row to view price history chart.
+            </span>
           </p>
         </div>
 
@@ -130,49 +149,70 @@ const SkillPrices = () => {
             <div className="divide-y divide-concrete-200">
               {categories.map(cat => {
                 const ratio = cat.demand / Math.max(cat.supply, 1);
-                const snap  = cat.lastSnapshot;
+                const isExpanded = expandedSlug === cat.slug;
                 return (
-                  <div
-                    key={cat._id}
-                    className="grid gap-3 px-5 py-4 md:grid-cols-[2fr_1fr_0.7fr_0.7fr_1.2fr_1.4fr] md:items-center"
-                  >
-                    {/* Name + Description */}
-                    <div>
-                      <p className="font-semibold text-slate-950">{cat.name}</p>
-                      <p className="mt-0.5 text-xs text-steel-500 line-clamp-1">{cat.description}</p>
-                    </div>
-
-                    {/* Live Price */}
-                    <div>
-                      <p className="text-lg font-bold text-navy-900">{fmt(cat.priceBDT)}</p>
-                    </div>
-
-                    {/* Demand */}
-                    <div className="text-center md:text-left">
-                      <p className="text-lg font-semibold text-slate-950">{cat.demand}</p>
-                      <p className="text-xs text-steel-400">requests</p>
-                    </div>
-
-                    {/* Supply */}
-                    <div className="text-center md:text-left">
-                      <p className="text-lg font-semibold text-slate-950">{cat.supply}</p>
-                      <p className="text-xs text-steel-400">providers</p>
-                    </div>
-
-                    {/* Trend */}
-                    <div className="space-y-1">
-                      <Trend ratio={ratio} />
-                      <p className="text-xs text-steel-400">ratio {ratio.toFixed(2)}</p>
-                    </div>
-
-                    {/* Price Bar */}
-                    <div className="space-y-1">
-                      <PriceBar value={cat.priceBDT} floor={cat.floor} ceiling={cat.ceiling} />
-                      <div className="flex justify-between text-[10px] text-steel-400">
-                        <span>৳{cat.floor.toLocaleString()} floor</span>
-                        <span>৳{cat.ceiling.toLocaleString()} ceiling</span>
+                  <div key={cat._id}>
+                    {/* Row (clickable) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(cat.slug)}
+                      className={`w-full text-left grid gap-3 px-5 py-4 md:grid-cols-[2fr_1fr_0.7fr_0.7fr_1.2fr_1.4fr] md:items-center transition-colors ${
+                        isExpanded ? 'bg-navy-50/40' : 'hover:bg-concrete-50/50'
+                      }`}
+                    >
+                      {/* Name + Description */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-slate-950">{cat.name}</p>
+                          <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                            ▾
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-steel-500 line-clamp-1">{cat.description}</p>
                       </div>
-                    </div>
+
+                      {/* Live Price */}
+                      <div>
+                        <p className="text-lg font-bold text-navy-900">{fmt(cat.priceBDT)}</p>
+                      </div>
+
+                      {/* Demand */}
+                      <div className="text-center md:text-left">
+                        <p className="text-lg font-semibold text-slate-950">{cat.demand}</p>
+                        <p className="text-xs text-steel-400">requests</p>
+                      </div>
+
+                      {/* Supply */}
+                      <div className="text-center md:text-left">
+                        <p className="text-lg font-semibold text-slate-950">{cat.supply}</p>
+                        <p className="text-xs text-steel-400">providers</p>
+                      </div>
+
+                      {/* Trend */}
+                      <div className="space-y-1">
+                        <Trend ratio={ratio} />
+                        <p className="text-xs text-steel-400">ratio {ratio.toFixed(2)}</p>
+                      </div>
+
+                      {/* Price Bar */}
+                      <div className="space-y-1">
+                        <PriceBar value={cat.priceBDT} floor={cat.floor} ceiling={cat.ceiling} />
+                        <div className="flex justify-between text-[10px] text-steel-400">
+                          <span>৳{cat.floor.toLocaleString()} floor</span>
+                          <span>৳{cat.ceiling.toLocaleString()} ceiling</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Expanded chart panel (accordion) */}
+                    {isExpanded && (
+                      <div className="px-5 pb-5 pt-2 border-t border-concrete-100 bg-concrete-50/30">
+                        <ValuationTrendChart
+                          slug={cat.slug}
+                          categoryName={cat.name}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -180,6 +220,21 @@ const SkillPrices = () => {
           </>
         )}
       </section>
+
+      {/* ── Compare Skills Section ────────────────────────────────── */}
+      {!loading && categories.length >= 2 && (
+        <section className="surface-card p-5 space-y-4">
+          <div>
+            <span className="eyebrow mb-1">Market Comparison</span>
+            <h2 className="text-base font-semibold text-slate-950">Compare Skill Prices</h2>
+            <p className="mt-1 text-sm text-steel-600">
+              Select two skill categories to compare their price trends on the same chart.
+            </p>
+          </div>
+
+          <ValuationComparisonChart categories={categories} />
+        </section>
+      )}
 
       {/* ── Formula Note ───────────────────────────────────────────── */}
       <div className="rounded-lg border border-concrete-200 bg-concrete-50 p-4 text-xs text-steel-500">

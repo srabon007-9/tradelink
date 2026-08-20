@@ -41,14 +41,14 @@ const SESSION_DURATION_MINUTES = 60;
 
 /** The live valuation-engine price for a category right now, or null if untracked. */
 const getLivePrice = async category => {
-  if (category === 'other') return null;
+  if (category === 'other') {return null;}
   const categoryDoc = await SkillCategory.findOne({ slug: category }).select('priceBDT').lean();
   return categoryDoc ? categoryDoc.priceBDT : null;
 };
 
 /** Best-effort demand adjustment — a proposal's lifecycle shouldn't fail on a valuation hiccup. */
 const adjustDemand = async (category, delta) => {
-  if (!category || category === 'other') return;
+  if (!category || category === 'other') {return;}
   try {
     await valuationService.updateDemand(category, delta);
   } catch (err) {
@@ -67,7 +67,7 @@ const tradeProposalService = {
    */
   createProposal: async (requesterId, { listingId, proposedSessionAt, message, creditsToRedeem }) => {
     const listing = await SkillListing.findById(listingId);
-    if (!listing) throw ApiError.notFound('Skill listing not found');
+    if (!listing) {throw ApiError.notFound('Skill listing not found');}
     if (listing.status !== 'active') {
       throw ApiError.badRequest('This listing is not currently active');
     }
@@ -76,7 +76,7 @@ const tradeProposalService = {
     }
 
     const priceAtProposal = await getLivePrice(listing.category);
-    if (priceAtProposal == null) {
+    if (priceAtProposal === null || priceAtProposal === undefined) {
       throw ApiError.badRequest(
         "This skill isn't priced by the valuation engine yet, so trade proposals aren't available for it."
       );
@@ -154,7 +154,7 @@ const tradeProposalService = {
     const proposal = await TradeProposal.findById(id)
       .populate('requester', 'name email avatar')
       .populate('provider', 'name email avatar');
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.requester._id.toString() !== userId && proposal.provider._id.toString() !== userId) {
       throw ApiError.forbidden('You are not part of this trade proposal');
     }
@@ -168,7 +168,7 @@ const tradeProposalService = {
    */
   acceptProposal: async (id, providerId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.provider.toString() !== providerId) {
       throw ApiError.forbidden('Only the provider can accept this proposal');
     }
@@ -215,7 +215,7 @@ const tradeProposalService = {
 
   declineProposal: async (id, providerId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.provider.toString() !== providerId) {
       throw ApiError.forbidden('Only the provider can decline this proposal');
     }
@@ -232,7 +232,7 @@ const tradeProposalService = {
 
   cancelProposal: async (id, requesterId) => {
     const proposal = await TradeProposal.findById(id);
-    if (!proposal) throw ApiError.notFound('Trade proposal not found');
+    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
     if (proposal.requester.toString() !== requesterId) {
       throw ApiError.forbidden('Only the requester can cancel this proposal');
     }

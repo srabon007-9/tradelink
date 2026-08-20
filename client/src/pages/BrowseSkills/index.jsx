@@ -16,6 +16,7 @@ import PageHeader from '../../components/layout/PageHeader';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import DateTimePicker from '../../components/ui/DateTimePicker';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import useAuth from '../../hooks/useAuth';
@@ -325,13 +326,11 @@ const BrowseSkills = () => {
                       <label htmlFor={`session-time-${listing._id}`} className="mb-1 block text-xs font-medium text-steel-700">
                         Proposed session time
                       </label>
-                      <input
+                      <DateTimePicker
                         id={`session-time-${listing._id}`}
-                        type="datetime-local"
-                        className="input-base"
                         min={MIN_SESSION_DATETIME}
                         value={bookingDate}
-                        onChange={e => setBookingDate(e.target.value)}
+                        onChange={val => setBookingDate(val)}
                       />
                     </div>
                     <textarea
