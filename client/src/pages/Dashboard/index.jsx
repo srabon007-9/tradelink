@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
+    if (user?.role === 'admin') return;
     setLoading(true);
     try {
       const [walletRes, listingsRes, txRes, propRes, repRes] = await Promise.all([
@@ -58,8 +59,14 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user?.role !== 'admin') {
+      loadDashboardData();
+    }
+  }, [user?.role]);
+
+  if (user?.role === 'admin') {
+    return <Navigate to="/dashboard/admin/overview" replace />;
+  }
 
   const activeListingsCount = myListings.filter(l => l.status === 'active').length;
   const pendingTransactions = transactions.filter(t => t.status === 'pending').length;

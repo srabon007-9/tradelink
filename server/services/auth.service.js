@@ -77,6 +77,12 @@ const authService = {
       throw err;
     }
 
+    if (user.isSuspended) {
+      const err = new Error('Your account has been suspended. Please contact platform support.');
+      err.statusCode = 403;
+      throw err;
+    }
+
     const { accessToken, refreshToken } = generateTokens(user._id);
 
     user.refreshToken = refreshToken;

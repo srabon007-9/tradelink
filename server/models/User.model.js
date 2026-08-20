@@ -38,6 +38,7 @@ const UserSchema = new mongoose.Schema(
     },
     assignedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
     isVerified: { type: Boolean, default: false },
+    isSuspended: { type: Boolean, default: false },
     refreshToken: { type: String, select: false },
   },
   { timestamps: true }
@@ -70,6 +71,7 @@ UserSchema.methods.toPublicJSON = function () {
     phone: this.phone,
     role: this.role,
     isVerified: this.isVerified,
+    isSuspended: this.isSuspended,
     createdAt: this.createdAt,
   };
 };

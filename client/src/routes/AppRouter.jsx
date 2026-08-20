@@ -27,6 +27,11 @@ import Profile from '../pages/Profile';
 import Messages from '../pages/Messages';
 import Reviews from '../pages/Reviews';
 import Settings from '../pages/Settings';
+import AdminOverview from '../pages/Admin/Overview';
+import AdminUsers from '../pages/Admin/Users';
+import AdminCategories from '../pages/Admin/Categories';
+import AdminTrades from '../pages/Admin/Trades';
+import AdminDisputes from '../pages/Admin/Disputes';
 import About from '../pages/About';
 import Contact from '../pages/Contact';
 import NotFound from '../pages/NotFound';
@@ -66,6 +71,13 @@ const router = createBrowserRouter([
       { path: 'messages', element: <Messages /> },
       { path: 'reviews', element: <Reviews /> },
       { path: 'settings', element: <Settings /> },
+
+      // Admin Management Routes
+      { path: 'admin/overview', element: <AdminOverview /> },
+      { path: 'admin/users', element: <AdminUsers /> },
+      { path: 'admin/categories', element: <AdminCategories /> },
+      { path: 'admin/trades', element: <AdminTrades /> },
+      { path: 'admin/disputes', element: <AdminDisputes /> },
     ],
   },
 
