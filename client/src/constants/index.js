@@ -16,6 +16,7 @@ export const ROUTES = {
   MY_SKILLS: '/dashboard/skills',
   WALLET: '/dashboard/wallet',
   TRANSACTIONS: '/dashboard/transactions',
+  WATCHLIST: '/dashboard/watchlist',
   ABOUT: '/about',
   CONTACT: '/contact',
 };

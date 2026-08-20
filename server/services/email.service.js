@@ -105,6 +105,65 @@ Thank you for using TradeLink!
       return false;
     }
   },
+
+  /**
+   * Sends a Watchlist price-alert email when a watched category crosses
+   * the user's threshold (see jobs/watchlistCron.js). Failure is fully
+   * swallowed — a broken email must never stop the cron from checking
+   * the rest of the watchlist.
+   */
+  sendWatchlistAlert: async ({ toEmail, userName, categoryName, condition, thresholdBDT, currentPriceBDT }) => {
+    try {
+      const transporter = createTransporter();
+      if (!transporter) {
+        logger.warn(`[Email] Skipping watchlist alert for ${toEmail}: EMAIL_USER / EMAIL_PASSWORD not set in .env`);
+        return false;
+      }
+
+      const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@tradelink.com.bd';
+      const directionLabel = condition === 'below' ? 'dropped below' : 'risen above';
+
+      const textBody = `Hello ${userName || 'Student'},
+
+Your TradeLink watchlist alert has triggered!
+
+Category: ${categoryName}
+Your target: price ${directionLabel} ৳${thresholdBDT} BDT
+Current live price: ৳${currentPriceBDT} BDT
+
+This is a great time to check the marketplace for this skill.
+
+— The TradeLink Team`;
+
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
+          <h2 style="color: #0f172a; margin-top: 0;">📈 Watchlist Alert — ${categoryName}</h2>
+          <p>Hello <strong>${userName || 'Student'}</strong>,</p>
+          <p>A category on your TradeLink watchlist just hit your target price.</p>
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 4px 0;"><strong>Category:</strong> ${categoryName}</p>
+            <p style="margin: 4px 0;"><strong>Your target:</strong> price ${directionLabel} ৳${thresholdBDT} BDT</p>
+            <p style="margin: 4px 0; font-size: 16px;"><strong>Current live price:</strong> <span style="color: #1e3a8a; font-weight: bold;">৳${currentPriceBDT} BDT</span></p>
+          </div>
+          <p style="color: #64748b; font-size: 13px;">You're receiving this because you added this category to your TradeLink watchlist. This watch has now paused — visit your Watchlist page to reactivate it.</p>
+        </div>
+      `;
+
+      await transporter.sendMail({
+        from: `TradeLink <${fromAddress}>`,
+        to: toEmail,
+        subject: `TradeLink Watchlist Alert: ${categoryName} ${directionLabel} ৳${thresholdBDT}`,
+        text: textBody,
+        html: htmlBody,
+      });
+
+      logger.info(`[Email] Watchlist alert sent to ${toEmail} for ${categoryName}.`);
+      return true;
+    } catch (err) {
+      logger.error(`[Email] Failed to send watchlist alert to ${toEmail}: ${err.message}`);
+      return false;
+    }
+  },
 };
 
 module.exports = emailService;

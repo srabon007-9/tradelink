@@ -5,6 +5,7 @@ const connectDB              = require('./config/db');
 const logger                 = require('./utils/logger');
 const { seedCategories }     = require('./services/valuation.service');
 const { startValuationCron } = require('./jobs/valuationCron');
+const { startWatchlistCron } = require('./jobs/watchlistCron');
 
 validateEnv();
 
@@ -20,6 +21,7 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
       await connectDB();
       await seedCategories();
       startValuationCron();
+      startWatchlistCron();
 
       const server = app.listen(PORT, () => {
         logger.info(`TradeLink server running in ${NODE_ENV} mode on port ${PORT}`);
