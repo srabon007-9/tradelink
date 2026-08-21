@@ -21,10 +21,14 @@ const skillListingRoutes     = require('./skillListing.routes');
 const categoryBrowsingRoutes = require('./categoryBrowsing.routes');
 const tradeProposalRoutes    = require('./tradeProposal.routes');
 const transactionRoutes      = require('./transaction.routes');
+<<<<<<< Updated upstream
 const creditWalletRoutes     = require('./creditWallet.routes');
 const reputationRoutes       = require('./reputation.routes');
 const adminRoutes            = require('./admin.routes');
 const watchlistRoutes        = require('./watchlist.routes');
+=======
+const paymentRoutes          = require('./payment.routes');
+>>>>>>> Stashed changes
 
 const router = express.Router();
 
@@ -39,9 +43,13 @@ router.use('/skill-listings',  skillListingRoutes);
 router.use('/browse',          categoryBrowsingRoutes);
 router.use('/trade-proposals', tradeProposalRoutes);
 router.use('/transactions',    transactionRoutes);
+<<<<<<< Updated upstream
 router.use('/wallet',          creditWalletRoutes);
 router.use('/reputation',      reputationRoutes);
 router.use('/admin',           adminRoutes);
 router.use('/watchlist',       watchlistRoutes);
+=======
+router.use('/payments',        paymentRoutes);
+>>>>>>> Stashed changes
 
 module.exports = router;

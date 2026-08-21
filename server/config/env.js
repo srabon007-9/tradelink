@@ -39,6 +39,7 @@ const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   mongoUri: process.env.MONGO_URI,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  serverUrl: process.env.SERVER_URL || `http://localhost:${parseInt(process.env.PORT, 10) || 5000}`,
 
   jwt: {
     secret: process.env.JWT_SECRET,
@@ -70,6 +71,12 @@ const config = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
     from: process.env.EMAIL_FROM || 'noreply@tradelink.com.bd',
+  },
+  
+  sslcommerz: {
+    storeId: process.env.SSLCOMMERZ_STORE_ID,
+    storePassword: process.env.SSLCOMMERZ_STORE_PASSWORD,
+    isLive: process.env.SSLCOMMERZ_IS_LIVE === 'true',
   },
 };
 
