@@ -109,6 +109,52 @@ const tradeProposalController = {
       next(err);
     }
   },
+
+  // ─── PATCH /api/trade-proposals/:id/dispute ──────────────────────────────────
+  dispute: async (req, res, next) => {
+    try {
+      const proposal = await tradeProposalService.raiseDispute(req.params.id, req.user.id, req.body.reason);
+      return res.status(200).json({
+        success: true,
+        message: "Dispute raised — an admin will review it against the recorded market rate.",
+        data: proposal,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ─── GET /api/trade-proposals/disputes/mine ──────────────────────────────────
+  getMyDisputes: async (req, res, next) => {
+    try {
+      const disputes = await tradeProposalService.getMyDisputes(req.user.id);
+      return res.status(200).json({ success: true, data: disputes });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ─── GET /api/trade-proposals/:id/messages ───────────────────────────────────
+  getMessages: async (req, res, next) => {
+    try {
+      const isAdmin = req.user.role === 'admin';
+      const messages = await tradeProposalService.getMessages(req.params.id, req.user.id, isAdmin);
+      return res.status(200).json({ success: true, data: messages });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ─── POST /api/trade-proposals/:id/messages ──────────────────────────────────
+  postMessage: async (req, res, next) => {
+    try {
+      const isAdmin = req.user.role === 'admin';
+      const message = await tradeProposalService.postMessage(req.params.id, req.user.id, isAdmin, req.body.message);
+      return res.status(201).json({ success: true, data: message });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = tradeProposalController;

@@ -26,6 +26,165 @@ const ROLE_COLORS = {
   client: 'gray',
 };
 
+const DISPUTE_STATUS_META = {
+  disputed: { label: 'Open', color: 'red' },
+  completed: { label: 'Resolved', color: 'green' },
+  cancelled: { label: 'Resolved (Cancelled)', color: 'gray' },
+};
+
+const formatDateTime = iso =>
+  iso ? new Date(iso).toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+const DisputeThread = ({ dispute }) => {
+  const { addToast } = useToast();
+  const [messages, setMessages] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const loadMessages = () => {
+    setLoading(true);
+    api.get(`/trade-proposals/${dispute._id}/messages`)
+      .then(res => setMessages(res.data.data))
+      .catch(() => setMessages([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispute._id]);
+
+  const handleReply = async () => {
+    if (reply.trim().length < 1) {return;}
+    setSending(true);
+    try {
+      await api.post(`/trade-proposals/${dispute._id}/messages`, { message: reply.trim() });
+      setReply('');
+      loadMessages();
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to send message.', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const complainant = dispute.disputedBy === dispute.requester._id ? dispute.requester : dispute.provider;
+
+  return (
+    <div className="mt-3 space-y-3 rounded-lg border border-concrete-200 bg-concrete-50 p-3">
+      {dispute.disputeReason && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-800">
+          <span className="font-semibold">Complaint from {complainant?.name || 'Unknown'}: </span>
+          "{dispute.disputeReason}"
+        </div>
+      )}
+      {dispute.adminResolutionNote && (
+        <div className="rounded-md border border-navy-100 bg-navy-50 p-2.5 text-xs text-navy-800">
+          <span className="font-semibold">Admin resolution: </span>{dispute.adminResolutionNote}
+        </div>
+      )}
+
+      <div className="max-h-64 space-y-2 overflow-y-auto">
+        {loading ? (
+          <p className="text-xs text-steel-500">Loading messages…</p>
+        ) : !messages || messages.length === 0 ? (
+          <p className="text-xs text-steel-500">No messages yet.</p>
+        ) : (
+          messages.map(m => (
+            <div
+              key={m._id}
+              className={`rounded-md p-2 text-xs ${
+                m.senderRole === 'admin' ? 'border border-amber-200 bg-amber-50' : 'border border-concrete-200 bg-white'
+              }`}
+            >
+              <p className="font-semibold text-navy-900">
+                {m.senderRole === 'admin' ? '🛡️ Admin' : m.sender?.name || 'User'}
+                <span className="ml-2 font-normal text-steel-400">{formatDateTime(m.createdAt)}</span>
+              </p>
+              <p className="mt-0.5 text-steel-700">{m.message}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {dispute.status === 'disputed' ? (
+        <div className="space-y-2">
+          <textarea
+            rows={2}
+            className="input-base text-xs"
+            placeholder="Reply to admin…"
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            maxLength={1000}
+          />
+          <Button size="sm" disabled={sending || !reply.trim()} onClick={handleReply}>
+            {sending ? 'Sending…' : 'Send Reply'}
+          </Button>
+        </div>
+      ) : (
+        <p className="text-xs text-steel-500">This dispute has been resolved — the thread is now read-only.</p>
+      )}
+    </div>
+  );
+};
+
+const DisputesPanel = () => {
+  const [disputes, setDisputes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
+
+  useEffect(() => {
+    api.get('/trade-proposals/disputes/mine')
+      .then(res => setDisputes(res.data.data))
+      .catch(() => setDisputes([]))
+      .finally(() => setLoading(false));
+    api.patch('/notifications/read-all', {}, { params: { category: 'profile' } }).catch(() => {});
+  }, []);
+
+  if (loading || disputes.length === 0) {return null;}
+
+  return (
+    <Card className="p-6">
+      <div className="mb-4">
+        <span className="eyebrow mb-1">Dispute Resolution</span>
+        <h2 className="text-lg font-semibold text-slate-950">Disputes & Admin Messages</h2>
+        <p className="mt-1 text-sm text-steel-600">
+          Trades you've disputed or been disputed on, admin's messages, and your replies.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {disputes.map(d => {
+          const counterparty = d.viewerRole === 'requester' ? d.provider : d.requester;
+          const isExpanded = expandedId === d._id;
+          const meta = DISPUTE_STATUS_META[d.status] || { label: d.status, color: 'gray' };
+
+          return (
+            <div key={d._id} className="rounded-lg border border-concrete-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">{d.listingTitle}</p>
+                  <p className="text-xs text-steel-500">
+                    With {counterparty?.name || 'Unknown'} · Disputed {formatDate(d.disputedAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge color={meta.color}>{meta.label}</Badge>
+                  <Button size="sm" variant="outline" onClick={() => setExpandedId(isExpanded ? null : d._id)}>
+                    {isExpanded ? 'Hide' : 'View'}
+                  </Button>
+                </div>
+              </div>
+              {isExpanded && <DisputeThread dispute={d} />}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+};
+
 const Field = ({ label, value }) => (
   <div>
     <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">{label}</p>
@@ -317,6 +476,9 @@ const Profile = () => {
           </>
         )}
       </Card>
+
+      {/* ── Disputes & Admin Messages Section ────────────────────────────── */}
+      <DisputesPanel />
 
       {/* ── Reputation Score Section ──────────────────────────────────── */}
       <Card className="p-6">

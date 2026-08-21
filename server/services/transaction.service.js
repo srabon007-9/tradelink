@@ -36,6 +36,7 @@
 const Transaction = require('../models/Transaction.model');
 const sslcommerzService = require('./sslcommerz.service');
 const creditWalletService = require('./creditWallet.service');
+const notificationService = require('./notification.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -50,6 +51,17 @@ const assertParty = (transaction, userId) => {
   }
   return { isRequester, isProvider };
 };
+
+/** Shorthand for the 'transaction' category notifications fired at each lifecycle step below. */
+const notifyTransactionStep = (userId, type, title, message, transaction) =>
+  notificationService.notify(userId, {
+    category: 'transaction',
+    type,
+    title,
+    message,
+    link: '/dashboard/transactions',
+    relatedTransaction: transaction._id,
+  });
 
 /** Awards Credit Wallet credits to both sides the instant a transaction's payment is confirmed. */
 const awardCompletionCredits = async transaction => {
@@ -132,6 +144,13 @@ const transactionService = {
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} marked delivered by provider.`);
+    await notifyTransactionStep(
+      transaction.requester,
+      'transaction_delivered',
+      'Service marked delivered',
+      `The provider marked "${transaction.listingTitle}" as delivered — confirm receipt to continue.`,
+      transaction
+    );
     return transaction;
   },
 
@@ -155,6 +174,13 @@ const transactionService = {
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} receipt confirmed by requester — ready for payment.`);
+    await notifyTransactionStep(
+      transaction.provider,
+      'transaction_received',
+      'Receipt confirmed',
+      `The buyer confirmed receipt for "${transaction.listingTitle}" — payment is next.`,
+      transaction
+    );
     return transaction;
   },
 
@@ -178,6 +204,13 @@ const transactionService = {
 
     logger.info(`[Transaction] ${transaction._id} confirmed paid offline by requester.`);
     await awardCompletionCredits(transaction);
+    await notifyTransactionStep(
+      transaction.provider,
+      'transaction_paid',
+      'Payment received',
+      `The buyer confirmed an offline payment of ৳${transaction.amount} for "${transaction.listingTitle}".`,
+      transaction
+    );
     return transaction;
   },
 
@@ -200,6 +233,13 @@ const transactionService = {
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} bKash Transaction ID submitted — awaiting provider verification.`);
+    await notifyTransactionStep(
+      transaction.provider,
+      'transaction_payment_submitted',
+      'bKash payment submitted',
+      `The buyer submitted a bKash Transaction ID for "${transaction.listingTitle}" — please verify it.`,
+      transaction
+    );
     return transaction;
   },
 
@@ -223,6 +263,13 @@ const transactionService = {
 
     logger.info(`[Transaction] ${transaction._id} bKash payment verified by provider.`);
     await awardCompletionCredits(transaction);
+    await notifyTransactionStep(
+      transaction.requester,
+      'transaction_paid',
+      'Payment verified',
+      `Your bKash payment for "${transaction.listingTitle}" was verified — the trade is complete.`,
+      transaction
+    );
     return transaction;
   },
 
@@ -245,6 +292,13 @@ const transactionService = {
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} bKash Transaction ID rejected by provider — requester can retry.`);
+    await notifyTransactionStep(
+      transaction.requester,
+      'transaction_payment_rejected',
+      'bKash Transaction ID rejected',
+      `Your bKash Transaction ID for "${transaction.listingTitle}" didn't match — please resubmit or pay offline.`,
+      transaction
+    );
     return transaction;
   },
 

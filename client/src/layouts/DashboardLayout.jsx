@@ -2,27 +2,37 @@
  * layouts/DashboardLayout.jsx — Responsive Authenticated Member Layout
  */
 
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../components/common/Logo';
 import Avatar from '../components/ui/Avatar';
 import { ROUTES } from '../constants';
 import useAuth from '../hooks/useAuth';
+import api from '../services/api';
 
 const MEMBER_SIDEBAR_LINKS = [
   { label: 'Overview',       to: ROUTES.DASHBOARD,             icon: 'OV' },
   { label: 'Browse Skills',  to: ROUTES.BROWSE,                icon: 'SK' },
   { label: 'Market Prices',  to: `${ROUTES.DASHBOARD}/prices`, icon: 'MP' },
-  { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF' },
+  { label: 'My Profile',     to: `${ROUTES.DASHBOARD}/profile`, icon: 'PF', notifCategory: 'profile' },
   { label: 'My Skills',      to: ROUTES.MY_SKILLS,             icon: 'MS' },
   { label: 'Credit Wallet',  to: ROUTES.WALLET,                icon: 'CW' },
   { label: 'Watchlist',      to: ROUTES.WATCHLIST,             icon: 'WL' },
-  { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ' },
-  { label: 'Transactions',   to: `${ROUTES.DASHBOARD}/transactions`, icon: 'TX' },
+  { label: 'Requests',       to: `${ROUTES.DASHBOARD}/requests`, icon: 'RQ', notifCategory: 'request' },
+  { label: 'Transactions',   to: `${ROUTES.DASHBOARD}/transactions`, icon: 'TX', notifCategory: 'transaction' },
   { label: 'Messages',       to: `${ROUTES.DASHBOARD}/messages`, icon: 'MG' },
   { label: 'Reviews',        to: `${ROUTES.DASHBOARD}/reviews`,  icon: 'RV' },
   { label: 'Settings',       to: `${ROUTES.DASHBOARD}/settings`, icon: 'ST' },
 ];
+
+const NotificationBadge = ({ count }) => {
+  if (!count) return null;
+  return (
+    <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+};
 
 const ADMIN_SIDEBAR_LINKS = [
   { label: 'System Overview', to: `${ROUTES.DASHBOARD}/admin/overview`,   icon: '📊' },
@@ -36,10 +46,19 @@ const ADMIN_SIDEBAR_LINKS = [
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifCounts, setNotifCounts] = useState({});
   const isAdmin = user?.role === 'admin';
   const sidebarLinks = isAdmin ? ADMIN_SIDEBAR_LINKS : MEMBER_SIDEBAR_LINKS;
   const firstName = user?.name?.split(' ')[0] || (isAdmin ? 'Admin' : 'Member Workspace');
+
+  useEffect(() => {
+    if (isAdmin) {return;}
+    api.get('/notifications/counts')
+      .then(res => setNotifCounts(res.data.data))
+      .catch(() => {});
+  }, [isAdmin, location.pathname]);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -93,6 +112,7 @@ const DashboardLayout = () => {
                     {link.icon}
                   </span>
                   {link.label}
+                  {link.notifCategory && <NotificationBadge count={notifCounts[link.notifCategory]} />}
                 </>
               )}
             </NavLink>
@@ -158,6 +178,7 @@ const DashboardLayout = () => {
                     {link.icon}
                   </span>
                   <span className="truncate">{link.label}</span>
+                  {link.notifCategory && <NotificationBadge count={notifCounts[link.notifCategory]} />}
                 </NavLink>
               ))}
             </nav>

@@ -19,6 +19,8 @@ const STATUS_COLORS = {
   accepted: 'green',
   declined: 'red',
   cancelled: 'gray',
+  disputed: 'red',
+  completed: 'green',
 };
 
 const formatDateTime = iso =>
@@ -27,7 +29,54 @@ const formatDateTime = iso =>
     timeStyle: 'short',
   });
 
-const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) => {
+const DisputeAction = ({ busy, onDispute }) => {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs font-semibold text-red-700 underline underline-offset-2 hover:text-red-800"
+      >
+        Raise a Dispute
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor="dispute-reason" className="block text-xs font-medium text-steel-700">
+        What went wrong?
+      </label>
+      <textarea
+        id="dispute-reason"
+        rows={2}
+        className="input-base text-sm"
+        placeholder="Describe the disagreement (min 10 characters)…"
+        value={reason}
+        onChange={e => setReason(e.target.value)}
+        maxLength={500}
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={busy || reason.trim().length < 10}
+          onClick={() => onDispute(reason.trim())}
+        >
+          {busy ? 'Submitting…' : 'Submit Dispute'}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel, onDispute }) => {
   const counterparty = role === 'received' ? proposal.requester : proposal.provider;
 
   return (
@@ -103,6 +152,20 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
         </div>
       )}
 
+      {proposal.status === 'accepted' && (
+        <div className="mt-3">
+          <DisputeAction busy={busy} onDispute={onDispute} />
+        </div>
+      )}
+
+      {proposal.status === 'disputed' && (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <span className="font-semibold">Dispute submitted</span> — an admin will review it against the
+          recorded market rate.
+          {proposal.disputeReason && <p className="mt-1 text-red-700">"{proposal.disputeReason}"</p>}
+        </div>
+      )}
+
       {proposal.status === 'pending' && (
         <div className="mt-4 flex flex-wrap gap-2">
           {role === 'received' ? (
@@ -150,6 +213,7 @@ const Requests = () => {
 
   useEffect(() => {
     loadAll();
+    api.patch('/notifications/read-all', {}, { params: { category: 'request' } }).catch(() => {});
   }, []);
 
   const act = async (id, action) => {
@@ -167,6 +231,22 @@ const Requests = () => {
           addToast('Trade proposal declined', 'info');
         }
       }
+      loadAll();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
+      setError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDispute = async (id, reason) => {
+    setError('');
+    setBusyId(id);
+    try {
+      await api.patch(`/trade-proposals/${id}/dispute`, { reason });
+      addToast('Dispute raised — an admin will review it.', 'info');
       loadAll();
     } catch (err) {
       const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
@@ -240,6 +320,7 @@ const Requests = () => {
               onAccept={() => act(proposal._id, 'accept')}
               onDecline={() => act(proposal._id, 'decline')}
               onCancel={() => act(proposal._id, 'cancel')}
+              onDispute={reason => handleDispute(proposal._id, reason)}
             />
           ))}
         </div>

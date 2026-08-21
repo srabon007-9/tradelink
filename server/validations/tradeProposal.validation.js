@@ -55,4 +55,32 @@ const validateRushPreview = [
   validate,
 ];
 
-module.exports = { validateCreateProposal, validateProposalId, validateRushPreview };
+const validateDispute = [
+  param('id').isMongoId().withMessage('Invalid proposal id'),
+  body('reason')
+    .trim()
+    .notEmpty()
+    .withMessage('A reason for the dispute is required')
+    .isLength({ min: 10, max: 500 })
+    .withMessage('Reason must be between 10 and 500 characters'),
+  validate,
+];
+
+const validateDisputeMessage = [
+  param('id').isMongoId().withMessage('Invalid proposal id'),
+  body('message')
+    .trim()
+    .notEmpty()
+    .withMessage('A message is required')
+    .isLength({ max: 1000 })
+    .withMessage('Message must be under 1000 characters'),
+  validate,
+];
+
+module.exports = {
+  validateCreateProposal,
+  validateProposalId,
+  validateRushPreview,
+  validateDispute,
+  validateDisputeMessage,
+};

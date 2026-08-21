@@ -281,6 +281,7 @@ const Transactions = () => {
 
   useEffect(() => {
     load();
+    api.patch('/notifications/read-all', {}, { params: { category: 'transaction' } }).catch(() => {});
   }, []);
 
   const runAction = async (id, path, method = 'patch', body) => {
