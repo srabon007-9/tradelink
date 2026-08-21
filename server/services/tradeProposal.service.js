@@ -36,13 +36,11 @@ const TradeProposal = require('../models/TradeProposal.model');
 const SkillListing = require('../models/SkillListing.model');
 const SkillCategory = require('../models/SkillCategory.model');
 const User = require('../models/User.model');
-const DisputeMessage = require('../models/DisputeMessage.model');
 const valuationService = require('./valuation.service');
 const googleCalendarService = require('./googleCalendar.service');
 const transactionService = require('./transaction.service');
 const creditWalletService = require('./creditWallet.service');
 const rushPricingService = require('./rushPricing.service');
-const notificationService = require('./notification.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -170,15 +168,6 @@ const tradeProposalService = {
 
     await adjustDemand(listing.category, 1);
 
-    await notificationService.notify(listing.user, {
-      category: 'request',
-      type: 'trade_request_received',
-      title: 'New trade request',
-      message: `Someone proposed a trade on "${listing.title}".`,
-      link: '/dashboard/requests',
-      relatedTradeProposal: proposal._id,
-    });
-
     return proposal;
   },
 
@@ -259,15 +248,6 @@ const tradeProposalService = {
     await adjustDemand(proposal.category, -1);
     await transactionService.createForProposal(proposal);
 
-    await notificationService.notify(proposal.requester, {
-      category: 'request',
-      type: 'trade_request_accepted',
-      title: 'Trade request accepted',
-      message: `Your trade request for "${proposal.listingTitle}" was accepted.`,
-      link: '/dashboard/requests',
-      relatedTradeProposal: proposal._id,
-    });
-
     return proposal;
   },
 
@@ -285,15 +265,6 @@ const tradeProposalService = {
     await proposal.save();
     await adjustDemand(proposal.category, -1);
     await refundRedeemedCredits(proposal);
-
-    await notificationService.notify(proposal.requester, {
-      category: 'request',
-      type: 'trade_request_declined',
-      title: 'Trade request declined',
-      message: `Your trade request for "${proposal.listingTitle}" was declined.`,
-      link: '/dashboard/requests',
-      relatedTradeProposal: proposal._id,
-    });
 
     return proposal;
   },
@@ -317,120 +288,38 @@ const tradeProposalService = {
   },
 
   /**
-   * Either party on an accepted trade can flag a disagreement — puts the
-   * proposal in front of an admin for resolution (see admin.service.js's
-   * resolveDispute, which shows the market rate that was in effect at
-   * proposal time before deciding).
+   * Either party on an already-accepted trade can raise a dispute if
+   * something went wrong with the session (e.g. no-show, poor quality
+   * work). This flags the trade for admin review — see
+   * admin.service.js's resolveDispute for how it's ultimately settled.
    */
-  raiseDispute: async (id, userId, reason) => {
+  disputeProposal: async (id, userId, reason) => {
     const proposal = await TradeProposal.findById(id);
     if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
-    if (proposal.requester.toString() !== userId && proposal.provider.toString() !== userId) {
+
+    const isRequester = proposal.requester.toString() === userId;
+    const isProvider = proposal.provider.toString() === userId;
+    if (!isRequester && !isProvider) {
       throw ApiError.forbidden('You are not part of this trade proposal');
     }
+
     if (proposal.status !== 'accepted') {
-      throw ApiError.badRequest(`Only an accepted trade can be disputed (status: ${proposal.status})`);
+      throw ApiError.badRequest(
+        proposal.status === 'disputed'
+          ? 'This trade already has an open dispute'
+          : 'Only accepted trades can be disputed'
+      );
     }
 
     proposal.status = 'disputed';
     proposal.disputeReason = reason;
     proposal.disputedBy = userId;
     proposal.disputedAt = new Date();
+
     await proposal.save();
-
-    logger.info(`[TradeProposal] ${proposal._id} disputed by ${userId}.`);
-
-    const otherPartyId = proposal.requester.toString() === userId ? proposal.provider : proposal.requester;
-    await notificationService.notify(otherPartyId, {
-      category: 'profile',
-      type: 'dispute_raised',
-      title: 'A dispute was raised against your trade',
-      message: `A dispute was raised for "${proposal.listingTitle}". See My Profile for details.`,
-      link: '/dashboard/profile',
-      relatedTradeProposal: proposal._id,
-    });
 
     return proposal;
   },
-
-  /** Every trade proposal (past or present) this user was disputed on. */
-  getMyDisputes: async userId => {
-    const proposals = await TradeProposal.find({
-      $or: [{ requester: userId }, { provider: userId }],
-      disputedAt: { $ne: null },
-    })
-      .sort({ disputedAt: -1 })
-      .populate('requester', 'name email avatar')
-      .populate('provider', 'name email avatar')
-      .lean();
-
-    return proposals.map(p => ({
-      ...p,
-      viewerRole: p.requester._id.toString() === userId ? 'requester' : 'provider',
-    }));
-  },
-
-  /** The shared message thread for a disputed trade — requester, provider, and admin all read/write the same thread. */
-  getMessages: async (id, userId, isAdmin) => {
-    const proposal = await TradeProposal.findById(id);
-    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
-    if (!isAdmin && proposal.requester.toString() !== userId && proposal.provider.toString() !== userId) {
-      throw ApiError.forbidden('You are not part of this trade proposal');
-    }
-
-    return DisputeMessage.find({ tradeProposal: id })
-      .sort({ createdAt: 1 })
-      .populate('sender', 'name avatar')
-      .lean();
-  },
-
-  /** Post into a disputed trade's message thread — participants while it's active, admin any time it's on record. */
-  postMessage: async (id, userId, isAdmin, message) => {
-    const proposal = await TradeProposal.findById(id);
-    if (!proposal) {throw ApiError.notFound('Trade proposal not found');}
-
-    const isRequester = proposal.requester.toString() === userId;
-    const isProvider = proposal.provider.toString() === userId;
-    if (!isAdmin && !isRequester && !isProvider) {
-      throw ApiError.forbidden('You are not part of this trade proposal');
-    }
-    if (!proposal.disputedAt) {
-      throw ApiError.badRequest('Messages can only be sent on a trade that has been disputed');
-    }
-    if (!isAdmin && proposal.status !== 'disputed') {
-      throw ApiError.badRequest(`This dispute is already resolved (status: ${proposal.status})`);
-    }
-
-    const senderRole = isAdmin ? 'admin' : isRequester ? 'requester' : 'provider';
-    const doc = await DisputeMessage.create({ tradeProposal: id, sender: userId, senderRole, message });
-    const populated = await doc.populate('sender', 'name avatar');
-
-    // Notify whoever didn't send it — the other party (and, if admin sent
-    // it, both parties). Participants never notify admins here — admins
-    // monitor new messages directly from the Disputes Queue.
-    const recipients = isAdmin
-      ? [proposal.requester.toString(), proposal.provider.toString()]
-      : [isRequester ? proposal.provider.toString() : proposal.requester.toString()];
-
-    await Promise.all(
-      recipients.map(recipientId =>
-        notificationService.notify(recipientId, {
-          category: 'profile',
-          type: 'dispute_message',
-          title: isAdmin ? 'New message from admin' : 'New message on your dispute',
-          message: `New message on the dispute for "${proposal.listingTitle}".`,
-          link: '/dashboard/profile',
-          relatedTradeProposal: proposal._id,
-        })
-      )
-    );
-
-    return populated;
-  },
-
-  // Exposed for admin.service.js's resolveDispute — refunding a disputed
-  // trade's redeemed credits reuses the exact same logic as decline/cancel.
-  refundRedeemedCredits,
 };
 
 module.exports = tradeProposalService;

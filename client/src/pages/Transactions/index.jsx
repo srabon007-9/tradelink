@@ -334,8 +334,6 @@ const Transactions = () => {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
 
-  // FIX: tab was being used but was never defined.
-  const [tab, setTab] = useState('transactions');
 
   const load = () => {
     setLoading(true);

@@ -20,11 +20,15 @@ const MONGODB_OPTIONS = {
 let cached = global.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = global.mongoose = {
+    conn: null,
+    promise: null,
+  };
 }
 
 /**
  * Connects to MongoDB with connection caching for serverless environments.
+ *
  * @returns {Promise<typeof mongoose>}
  */
 const connectDB = async () => {
@@ -39,13 +43,13 @@ const connectDB = async () => {
     return cached.conn;
   }
 
-  // 2. Attach listeners once
+  // 2. Create connection promise if one doesn't exist
   if (!cached.promise) {
     mongoose.connection.on('connected', () => {
       logger.info('MongoDB connected successfully');
     });
 
-    mongoose.connection.on('error', err => {
+    mongoose.connection.on('error', (err) => {
       logger.error('MongoDB connection error:', err.message);
     });
 
@@ -53,14 +57,18 @@ const connectDB = async () => {
       logger.warn('MongoDB disconnected');
     });
 
-    // 3. Initiate connection and store the promise
-    cached.promise = mongoose.connect(uri, MONGODB_OPTIONS).then(m => m);
+    // 3. Initiate MongoDB connection
+    cached.promise = mongoose
+      .connect(uri, MONGODB_OPTIONS)
+      .then((mongooseInstance) => mongooseInstance);
   }
 
   try {
+    // 4. Wait for connection
     cached.conn = await cached.promise;
   } catch (err) {
-    cached.promise = null; // Reset promise on failure so next request retries
+    // 5. Reset promise if connection fails
+    cached.promise = null;
     throw err;
   }
 

@@ -99,16 +99,14 @@ const TradeProposalSchema = new mongoose.Schema(
     requesterAccepted: { type: Boolean, default: true },
     providerAccepted: { type: Boolean, default: false },
 
-    // ─── Dispute Resolution Using Valuation Data ────────────────────────────────
-    // Either party on an accepted trade can flag a disagreement. Admin then
-    // resolves it against the objective market rate that was in effect at
-    // proposal time (see admin.service.js's getDisputeDetail, which looks up
-    // the nearest ValuationSnapshot at-or-before createdAt for `category`).
-    disputeReason: { type: String, trim: true, maxlength: 500, default: '' },
-    disputedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    disputedAt: { type: Date, default: null },
-    adminResolutionNote: { type: String, trim: true, maxlength: 1000, default: '' },
-    completedAt: { type: Date, default: null },
+    // ─── Dispute (raised by either party on an accepted trade) ─────────────────
+    disputeReason: { type: String, trim: true, maxlength: [1000, 'Dispute reason must be under 1000 characters'] },
+    disputedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    disputedAt: { type: Date },
+
+    // ─── Admin resolution (see admin.service.js resolveDispute) ────────────────
+    adminResolutionNote: { type: String, trim: true, maxlength: 1000 },
+    completedAt: { type: Date },
 
     // ─── Session (populated once both sides accept) ────────────────────────────
     session: {

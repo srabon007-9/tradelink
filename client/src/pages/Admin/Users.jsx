@@ -47,6 +47,17 @@ export default function AdminUsers() {
     }
   };
 
+  const handlePromoteToAdmin = async (user) => {
+    if (!window.confirm(`Make ${user.name} an admin? They'll get full access to this admin panel.`)) {return;}
+    try {
+      const res = await api.patch(`/admin/users/${user.id}/promote`);
+      toast.success(res.data.message);
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: 'admin' } : u));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to promote user.');
+    }
+  };
+
   const handleToggleVerify = async (user) => {
     const newStatus = !user.isVerified;
     try {
@@ -159,17 +170,26 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       {u.role !== 'admin' && (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSuspend(u)}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                            u.isSuspended
-                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
-                        >
-                          {u.isSuspended ? 'Reactivate User' : 'Suspend User'}
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handlePromoteToAdmin(u)}
+                            className="rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-800 transition-colors hover:bg-purple-200"
+                          >
+                            Promote to Admin
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSuspend(u)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              u.isSuspended
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                : 'bg-red-100 text-red-800 hover:bg-red-200'
+                            }`}
+                          >
+                            {u.isSuspended ? 'Reactivate User' : 'Suspend User'}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

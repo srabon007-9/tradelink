@@ -49,38 +49,21 @@ const validateProposalId = [
   validate,
 ];
 
+const validateDispute = [
+  param('id').isMongoId().withMessage('Invalid proposal id'),
+  body('reason')
+    .trim()
+    .notEmpty()
+    .withMessage('Please describe what went wrong')
+    .isLength({ min: 5, max: 1000 })
+    .withMessage('Dispute reason must be between 5 and 1000 characters'),
+  validate,
+];
+
 const validateRushPreview = [
   query('priceBDT').isFloat({ min: 0 }).withMessage('A valid price is required'),
   query('deadline').isISO8601().withMessage('A valid deadline date/time is required'),
   validate,
 ];
 
-const validateDispute = [
-  param('id').isMongoId().withMessage('Invalid proposal id'),
-  body('reason')
-    .trim()
-    .notEmpty()
-    .withMessage('A reason for the dispute is required')
-    .isLength({ min: 10, max: 500 })
-    .withMessage('Reason must be between 10 and 500 characters'),
-  validate,
-];
-
-const validateDisputeMessage = [
-  param('id').isMongoId().withMessage('Invalid proposal id'),
-  body('message')
-    .trim()
-    .notEmpty()
-    .withMessage('A message is required')
-    .isLength({ max: 1000 })
-    .withMessage('Message must be under 1000 characters'),
-  validate,
-];
-
-module.exports = {
-  validateCreateProposal,
-  validateProposalId,
-  validateRushPreview,
-  validateDispute,
-  validateDisputeMessage,
-};
+module.exports = { validateCreateProposal, validateProposalId, validateRushPreview, validateDispute };

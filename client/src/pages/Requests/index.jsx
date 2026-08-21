@@ -29,54 +29,21 @@ const formatDateTime = iso =>
     timeStyle: 'short',
   });
 
-const DisputeAction = ({ busy, onDispute }) => {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState('');
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-xs font-semibold text-red-700 underline underline-offset-2 hover:text-red-800"
-      >
-        Raise a Dispute
-      </button>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <label htmlFor="dispute-reason" className="block text-xs font-medium text-steel-700">
-        What went wrong?
-      </label>
-      <textarea
-        id="dispute-reason"
-        rows={2}
-        className="input-base text-sm"
-        placeholder="Describe the disagreement (min 10 characters)…"
-        value={reason}
-        onChange={e => setReason(e.target.value)}
-        maxLength={500}
-      />
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant="danger"
-          disabled={busy || reason.trim().length < 10}
-          onClick={() => onDispute(reason.trim())}
-        >
-          {busy ? 'Submitting…' : 'Submit Dispute'}
-        </Button>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel, onDispute }) => {
+const ProposalCard = ({
+  proposal,
+  role,
+  busy,
+  onAccept,
+  onDecline,
+  onCancel,
+  isDisputing,
+  disputeReason,
+  onDisputeReasonChange,
+  onOpenDispute,
+  onCloseDispute,
+  onSubmitDispute,
+  disputeBusy,
+}) => {
   const counterparty = role === 'received' ? proposal.requester : proposal.provider;
 
   return (
@@ -133,14 +100,14 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel, onD
             <>
               <span className="font-semibold text-emerald-700">Calendar invite sent.</span>{' '}
               {proposal.session.calendarEventLink && (
-                <a
-                  href={proposal.session.calendarEventLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-navy-800 underline"
-                >
-                  View calendar event
-                </a>
+               <a
+                 href={proposal.session.calendarEventLink}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="font-semibold text-navy-800 underline"
+               >
+                 View calendar event
+               </a>
               )}
             </>
           ) : (
@@ -152,17 +119,26 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel, onD
         </div>
       )}
 
-      {proposal.status === 'accepted' && (
-        <div className="mt-3">
-          <DisputeAction busy={busy} onDispute={onDispute} />
+      {proposal.status === 'disputed' && (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm">
+          <p className="font-semibold text-red-800">
+            Dispute submitted — an admin will review this trade.
+          </p>
+          {proposal.disputeReason && (
+            <p className="mt-1 text-red-700">"{proposal.disputeReason}"</p>
+          )}
         </div>
       )}
 
-      {proposal.status === 'disputed' && (
-        <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          <span className="font-semibold">Dispute submitted</span> — an admin will review it against the
-          recorded market rate.
-          {proposal.disputeReason && <p className="mt-1 text-red-700">"{proposal.disputeReason}"</p>}
+      {proposal.status === 'completed' && proposal.adminResolutionNote && (
+        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          {proposal.adminResolutionNote}
+        </div>
+      )}
+
+      {proposal.status === 'cancelled' && proposal.adminResolutionNote && (
+        <div className="mt-3 rounded-md border border-concrete-200 bg-concrete-50 p-3 text-sm text-steel-700">
+          {proposal.adminResolutionNote}
         </div>
       )}
 
@@ -184,6 +160,41 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel, onD
           )}
         </div>
       )}
+
+      {proposal.status === 'accepted' && !isDisputing && (
+        <div className="mt-3">
+          <Button size="sm" variant="outline" onClick={onOpenDispute}>
+            Report a Problem
+          </Button>
+        </div>
+      )}
+
+      {proposal.status === 'accepted' && isDisputing && (
+        <div className="mt-3 space-y-2 rounded-md border border-concrete-200 p-3">
+          <label className="block text-sm font-semibold text-slate-950">What went wrong?</label>
+          <textarea
+            rows={3}
+            value={disputeReason}
+            onChange={e => onDisputeReasonChange(e.target.value)}
+            placeholder="Describe what happened during this session…"
+            className="input-base text-sm"
+            maxLength={1000}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={disputeBusy || disputeReason.trim().length < 5}
+              onClick={onSubmitDispute}
+            >
+              {disputeBusy ? 'Submitting…' : 'Submit Dispute'}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={disputeBusy} onClick={onCloseDispute}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </article>
   );
 };
@@ -196,6 +207,9 @@ const Requests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [disputeOpenId, setDisputeOpenId] = useState(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeBusyId, setDisputeBusyId] = useState(null);
 
   const loadAll = () => {
     setLoading(true);
@@ -213,7 +227,6 @@ const Requests = () => {
 
   useEffect(() => {
     loadAll();
-    api.patch('/notifications/read-all', {}, { params: { category: 'request' } }).catch(() => {});
   }, []);
 
   const act = async (id, action) => {
@@ -241,19 +254,30 @@ const Requests = () => {
     }
   };
 
-  const handleDispute = async (id, reason) => {
+  const openDispute = id => {
+    setDisputeOpenId(id);
+    setDisputeReason('');
+  };
+
+  const closeDispute = () => {
+    setDisputeOpenId(null);
+    setDisputeReason('');
+  };
+
+  const submitDispute = async id => {
     setError('');
-    setBusyId(id);
+    setDisputeBusyId(id);
     try {
-      await api.patch(`/trade-proposals/${id}/dispute`, { reason });
-      addToast('Dispute raised — an admin will review it.', 'info');
+      await api.patch(`/trade-proposals/${id}/dispute`, { reason: disputeReason.trim() });
+      addToast('Dispute submitted — an admin will review it shortly.', 'success');
+      closeDispute();
       loadAll();
     } catch (err) {
       const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
       setError(msg);
       addToast(msg, 'error');
     } finally {
-      setBusyId(null);
+      setDisputeBusyId(null);
     }
   };
 
@@ -320,7 +344,13 @@ const Requests = () => {
               onAccept={() => act(proposal._id, 'accept')}
               onDecline={() => act(proposal._id, 'decline')}
               onCancel={() => act(proposal._id, 'cancel')}
-              onDispute={reason => handleDispute(proposal._id, reason)}
+              isDisputing={disputeOpenId === proposal._id}
+              disputeReason={disputeOpenId === proposal._id ? disputeReason : ''}
+              onDisputeReasonChange={setDisputeReason}
+              onOpenDispute={() => openDispute(proposal._id)}
+              onCloseDispute={closeDispute}
+              onSubmitDispute={() => submitDispute(proposal._id)}
+              disputeBusy={disputeBusyId === proposal._id}
             />
           ))}
         </div>
