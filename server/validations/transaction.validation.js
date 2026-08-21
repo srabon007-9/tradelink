@@ -4,7 +4,7 @@
  * validations/transaction.validation.js — Transaction Input Validation
  */
 
-const { param, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -23,4 +23,15 @@ const validateTransactionId = [
   validate,
 ];
 
-module.exports = { validateTransactionId };
+const validateBkashPayment = [
+  param('id').isMongoId().withMessage('Invalid transaction id'),
+  body('bkashTransactionId')
+    .trim()
+    .notEmpty()
+    .withMessage('A bKash Transaction ID is required')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('bKash Transaction ID must be between 3 and 50 characters'),
+  validate,
+];
+
+module.exports = { validateTransactionId, validateBkashPayment };

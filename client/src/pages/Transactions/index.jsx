@@ -2,15 +2,14 @@
  * pages/Transactions/index.jsx — Escrow System (feature name: "Transaction")
  *
  * Once a trade proposal is accepted, its agreed price opens an escrow hold
- * here. The flow is now sequential and involves a real payment:
+ * here. The flow is sequential and ends in a manually-confirmed payment:
  *
  *   1. Provider marks the service as delivered.
  *   2. Requester confirms they received it (only possible after step 1).
- *   3. Requester pays via SSLCommerz — a hosted page where they pick their
- *      own payment method (card, bKash, Nagad, etc). TradeLink never
- *      touches card/wallet details directly.
- *   4. Once SSLCommerz validates the payment server-side, the transaction
- *      is marked "paid" and counts toward the provider's income.
+ *   3. Requester pays — either:
+ *        Offline: a single trusted confirmation (cash/in-person), or
+ *        bKash: the requester submits their bKash Transaction ID, and the
+ *        provider verifies it matches before funds count as released.
  *
  * This page also has an "My Income" tab — visible to everyone, but always
  * scoped to the logged-in user's own data (GET /transactions/income/mine),
@@ -22,38 +21,92 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import api from '../../services/api';
-import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const STATUS_META = {
   pending: { label: 'Pending Delivery', color: 'yellow' },
   delivered: { label: 'Awaiting Buyer Confirmation', color: 'accent' },
   awaiting_payment: { label: 'Awaiting Payment', color: 'primary' },
+  payment_submitted: { label: 'Awaiting Verification', color: 'accent' },
   paid: { label: 'Paid', color: 'green' },
   payment_failed: { label: 'Payment Failed', color: 'red' },
 };
 
-const PaymentBanner = ({ payment, onDismiss }) => {
-  if (!payment) return null;
+const PAYMENT_METHOD_LABELS = {
+  offline: 'Offline Payment',
+  bkash: 'bKash',
+};
 
-  const COPY = {
-    success: { color: 'border-emerald-200 bg-emerald-50 text-emerald-800', text: 'Payment confirmed — funds released to the provider.' },
-    failed: { color: 'border-red-200 bg-red-50 text-red-800', text: 'Payment could not be validated. You can retry below.' },
-    cancelled: { color: 'border-amber-200 bg-amber-50 text-amber-800', text: 'Payment was cancelled. You can retry below.' },
-  };
-  const meta = COPY[payment] || COPY.failed;
+const PayAction = ({ transaction, busy, onPayOffline, onPayBkash }) => {
+  const [method, setMethod] = useState(null); // null | 'offline' | 'bkash'
+  const [bkashId, setBkashId] = useState('');
+
+  if (method === 'offline') {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-steel-600">
+          Confirm you've paid <span className="font-semibold text-slate-950">{formatCurrency(transaction.amount)}</span>{' '}
+          in cash or another offline method.
+        </p>
+        <div className="flex gap-2">
+          <Button size="sm" disabled={busy} onClick={() => onPayOffline(transaction._id)}>
+            {busy ? 'Confirming…' : "Confirm — I've Paid Offline"}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setMethod(null)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (method === 'bkash') {
+    return (
+      <div className="space-y-2">
+        <label htmlFor={`bkash-id-${transaction._id}`} className="block text-xs font-medium text-steel-700">
+          bKash Transaction ID
+        </label>
+        <input
+          id={`bkash-id-${transaction._id}`}
+          type="text"
+          className="input-base"
+          placeholder="e.g. 8N7A6QK3XZ"
+          value={bkashId}
+          onChange={e => setBkashId(e.target.value)}
+          maxLength={50}
+        />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            disabled={busy || bkashId.trim().length < 3}
+            onClick={() => onPayBkash(transaction._id, bkashId.trim())}
+          >
+            {busy ? 'Submitting…' : 'Submit for Verification'}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setMethod(null)}>
+            Cancel
+          </Button>
+        </div>
+        <p className="text-xs text-steel-500">
+          The provider will check this Transaction ID against their bKash account before funds are released.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className={`flex items-center justify-between rounded-md border px-4 py-3 text-sm ${meta.color}`}>
-      <span>{meta.text}</span>
-      <button onClick={onDismiss} className="text-xs font-semibold underline underline-offset-2">
-        Dismiss
-      </button>
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" disabled={busy} onClick={() => setMethod('offline')}>
+        Pay Offline
+      </Button>
+      <Button size="sm" variant="ghost" disabled={busy} onClick={() => setMethod('bkash')}>
+        Pay with bKash
+      </Button>
     </div>
   );
 };
 
-const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPay }) => {
+const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPayOffline, onPayBkash, onVerifyBkash, onRejectBkash }) => {
   const isRequester = transaction.viewerRole === 'requester';
   const isProvider = !isRequester;
   const counterparty = isRequester ? transaction.provider : transaction.requester;
@@ -78,26 +131,6 @@ const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPay }) =
 
       <p className="mt-3 text-xs text-steel-500">Opened {formatDate(transaction.createdAt)}</p>
 
-<<<<<<< Updated upstream
-      <div className="mt-3 rounded-md border border-concrete-200 bg-concrete-50 p-3 text-sm text-steel-700">
-        {isReleased ? (
-          <span className="font-semibold text-emerald-700">
-            Both parties confirmed — {formatCurrency(transaction.amount)} released to the provider.
-          </span>
-        ) : (
-          <>
-            {formatCurrency(transaction.amount)} is held in escrow until both sides confirm the work was completed.
-            <div className="mt-2 flex flex-wrap gap-4 text-xs">
-              <span className={transaction.requesterConfirmed ? 'text-emerald-700 font-semibold' : 'text-steel-500'}>
-                {transaction.requesterConfirmed ? '✓' : '○'} Requester confirmed
-              </span>
-              <span className={transaction.providerConfirmed ? 'text-emerald-700 font-semibold' : 'text-steel-500'}>
-                {transaction.providerConfirmed ? '✓' : '○'} Provider confirmed
-              </span>
-            </div>
-          </>
-        )}
-=======
       {/* ─── Progress trail ─────────────────────────────────────────────── */}
       <div className="mt-3 flex flex-wrap gap-4 rounded-md border border-concrete-200 bg-concrete-50 p-3 text-xs">
         <span className={transaction.providerConfirmed ? 'font-semibold text-emerald-700' : 'text-steel-500'}>
@@ -109,13 +142,12 @@ const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPay }) =
         <span className={transaction.status === 'paid' ? 'font-semibold text-emerald-700' : 'text-steel-500'}>
           {transaction.status === 'paid' ? '✓' : '○'} Payment released
         </span>
->>>>>>> Stashed changes
       </div>
 
       {transaction.status === 'paid' && (
         <p className="mt-3 text-sm font-semibold text-emerald-700">
           ৳{transaction.amount} BDT paid
-          {transaction.payment?.method ? ` via ${transaction.payment.method}` : ''} on{' '}
+          {transaction.payment?.method ? ` via ${PAYMENT_METHOD_LABELS[transaction.payment.method] || transaction.payment.method}` : ''} on{' '}
           {formatDate(transaction.payment?.paidAt || transaction.releasedAt)}.
         </p>
       )}
@@ -140,20 +172,40 @@ const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPay }) =
           <p className="text-sm text-steel-600">Waiting for the buyer to confirm they received it.</p>
         )}
 
-        {(transaction.status === 'awaiting_payment' || transaction.status === 'payment_failed') && isRequester && (
-          <div>
-            <Button size="sm" disabled={busy} onClick={() => onPay(transaction._id)}>
-              {busy ? 'Opening payment…' : transaction.status === 'payment_failed' ? 'Retry Payment' : 'Pay Now'}
-            </Button>
-            <p className="mt-1.5 text-xs text-steel-500">
-              You'll be redirected to SSLCommerz to choose card, mobile banking, or another payment method.
-            </p>
-          </div>
+        {transaction.status === 'awaiting_payment' && isRequester && (
+          <PayAction transaction={transaction} busy={busy} onPayOffline={onPayOffline} onPayBkash={onPayBkash} />
         )}
-        {(transaction.status === 'awaiting_payment' || transaction.status === 'payment_failed') && isProvider && (
+        {transaction.status === 'awaiting_payment' && isProvider && (
           <p className="text-sm text-steel-600">
             Waiting for {counterparty?.name || 'the buyer'} to complete payment.
           </p>
+        )}
+
+        {transaction.status === 'payment_submitted' && isRequester && (
+          <p className="text-sm text-steel-600">
+            bKash Transaction ID{' '}
+            <span className="font-mono font-semibold text-slate-950">{transaction.payment?.bkashTransactionId}</span>{' '}
+            submitted — waiting for {counterparty?.name || 'the provider'} to verify it.
+          </p>
+        )}
+        {transaction.status === 'payment_submitted' && isProvider && (
+          <div className="space-y-2">
+            <p className="text-sm text-steel-600">
+              {counterparty?.name || 'The buyer'} submitted this bKash Transaction ID — check your bKash account for
+              a matching payment of {formatCurrency(transaction.amount)}:
+            </p>
+            <p className="rounded-md border border-concrete-200 bg-concrete-50 px-3 py-2 font-mono text-sm font-semibold text-slate-950">
+              {transaction.payment?.bkashTransactionId}
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" disabled={busy} onClick={() => onVerifyBkash(transaction._id)}>
+                {busy ? 'Confirming…' : 'Confirm — Matches'}
+              </Button>
+              <Button size="sm" variant="danger" disabled={busy} onClick={() => onRejectBkash(transaction._id)}>
+                Reject — Doesn't Match
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </Card>
@@ -199,7 +251,7 @@ const IncomeTab = () => {
                 <p className="text-sm font-semibold text-slate-950">{t.listingTitle}</p>
                 <p className="text-xs text-steel-500">
                   From {t.requester?.name || 'Unknown'} · Paid {formatDate(t.payment?.paidAt)}
-                  {t.payment?.method ? ` · ${t.payment.method}` : ''}
+                  {t.payment?.method ? ` · ${PAYMENT_METHOD_LABELS[t.payment.method] || t.payment.method}` : ''}
                 </p>
               </div>
               <p className="text-base font-bold text-emerald-700">+{formatCurrency(t.amount)}</p>
@@ -212,16 +264,11 @@ const IncomeTab = () => {
 };
 
 const Transactions = () => {
-<<<<<<< Updated upstream
-  const { addToast } = useToast();
-=======
   const [tab, setTab] = useState('transactions'); // 'transactions' | 'income'
->>>>>>> Stashed changes
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
-  const [paymentBanner, setPaymentBanner] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -234,40 +281,16 @@ const Transactions = () => {
 
   useEffect(() => {
     load();
-
-    // Pick up ?payment=success|failed|cancelled from the SSLCommerz redirect,
-    // show a banner, then clean the URL so refreshing doesn't re-show it.
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get('payment');
-    if (payment) {
-      setPaymentBanner(payment);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
   }, []);
 
-  const runAction = async (id, path, method = 'patch') => {
+  const runAction = async (id, path, method = 'patch', body) => {
     setError('');
     setBusyId(id);
     try {
-<<<<<<< Updated upstream
-      const res = await api.patch(`/transactions/${id}/confirm`);
-      const updatedTx = res.data.data;
-      if (updatedTx?.status === 'released') {
-        addToast('Work confirmed! Escrow released & credit wallet points awarded 🎉', 'success');
-      } else {
-        addToast('Completion confirmed. Waiting for the other party to confirm.', 'info');
-      }
-      load();
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to confirm. Please try again.';
-      setError(msg);
-      addToast(msg, 'error');
-=======
-      await api[method](`/transactions/${id}/${path}`);
+      await api[method](`/transactions/${id}/${path}`, body);
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
->>>>>>> Stashed changes
     } finally {
       setBusyId(null);
     }
@@ -275,20 +298,10 @@ const Transactions = () => {
 
   const handleDeliver = id => runAction(id, 'deliver');
   const handleReceive = id => runAction(id, 'receive');
-
-  const handlePay = async id => {
-    setError('');
-    setBusyId(id);
-    try {
-      const res = await api.post(`/transactions/${id}/pay`);
-      // Full-page redirect to SSLCommerz's hosted payment page — this is
-      // where the buyer picks their own payment method.
-      window.location.href = res.data.data.gatewayUrl;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Could not start the payment. Please try again.');
-      setBusyId(null);
-    }
-  };
+  const handlePayOffline = id => runAction(id, 'pay/offline', 'post');
+  const handlePayBkash = (id, bkashTransactionId) => runAction(id, 'pay/bkash', 'post', { bkashTransactionId });
+  const handleVerifyBkash = id => runAction(id, 'verify-bkash');
+  const handleRejectBkash = id => runAction(id, 'reject-bkash');
 
   const openCount = useMemo(
     () => transactions.filter(t => !['paid'].includes(t.status)).length,
@@ -302,8 +315,8 @@ const Transactions = () => {
         <h1 className="text-3xl font-semibold text-slate-950">Transactions & Escrow</h1>
         <p className="mt-2 text-sm text-steel-600">
           When a trade proposal is accepted, its agreed price opens an escrow hold here. The provider
-          delivers, the buyer confirms, then the buyer pays — funds only count as released once payment
-          is confirmed.
+          delivers, the buyer confirms, then the buyer pays offline or with bKash — funds only count as
+          released once payment is confirmed.
         </p>
       </div>
 
@@ -330,8 +343,6 @@ const Transactions = () => {
         <IncomeTab />
       ) : (
         <>
-          <PaymentBanner payment={paymentBanner} onDismiss={() => setPaymentBanner(null)} />
-
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
           )}
@@ -359,7 +370,10 @@ const Transactions = () => {
                   busyId={busyId}
                   onDeliver={handleDeliver}
                   onReceive={handleReceive}
-                  onPay={handlePay}
+                  onPayOffline={handlePayOffline}
+                  onPayBkash={handlePayBkash}
+                  onVerifyBkash={handleVerifyBkash}
+                  onRejectBkash={handleRejectBkash}
                 />
               ))}
             </div>

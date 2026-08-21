@@ -5,8 +5,9 @@
  *
  * Every user has a credit wallet (created lazily on first use). Credits
  * are earned by completing a trade — see transaction.service.js's
- * confirmCompletion, which calls earnCredits() for both the requester
- * and the provider the instant an escrow Transaction releases.
+ * finalizePayment, which calls earnCredits() for both the requester
+ * and the provider the instant an SSLCommerz payment is validated and
+ * the Transaction is marked 'paid'.
  *
  * Credits can be redeemed to discount a future trade's money cost — see
  * tradeProposal.service.js's createProposal, which calls

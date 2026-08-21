@@ -4,34 +4,31 @@
  * models/Transaction.model.js — Escrow System (feature name: "Transaction")
  *
  * Opened automatically the moment a Trade Proposal is accepted (see
-<<<<<<< Updated upstream
- * tradeProposal.service.js's acceptProposal). The agreed price is held in
- * a 'pending' state — not released to the provider — until BOTH the
- * requester and the provider independently confirm the work/session was
- * completed. This is what protects both sides from either party backing
- * out mid-trade.
-=======
  * tradeProposal.service.js's acceptProposal). The agreed price is held
  * until real money has actually changed hands — the lifecycle is:
  *
- *   pending           → provider still owes the service
- *   delivered         → provider confirmed they delivered it
- *   awaiting_payment  → requester confirmed they received it; can now pay
- *   paid              → SSLCommerz payment validated; funds count as the
- *                        provider's income
- *   payment_failed    → a payment attempt failed/was cancelled; requester
- *                        can retry from here
+ *   pending             → provider still owes the service
+ *   delivered           → provider confirmed they delivered it
+ *   awaiting_payment    → requester confirmed they received it; can now pay
+ *   payment_submitted   → requester submitted a bKash Transaction ID;
+ *                          waiting on the provider to verify it
+ *   paid                → funds count as the provider's income — reached
+ *                          either instantly (offline payment, requester's
+ *                          own word is trusted) or once the provider
+ *                          verifies a submitted bKash Transaction ID
+ *   payment_failed      → reserved for a failed/cancelled SSLCommerz
+ *                          attempt (legacy path, see payment.controller.js)
  *
  * Confirmation is intentionally sequential and enforced in
  * transaction.service.js: the requester can only confirm receipt AFTER the
  * provider confirms delivery, and can only pay AFTER confirming receipt.
- * That ordering — plus never marking paid without SSLCommerz's own
- * server-to-server validation — is what protects both sides from either
- * party backing out mid-trade.
+ * Offline payment is a one-step, trust-based confirmation; bKash payment
+ * requires the provider to independently verify the submitted Transaction
+ * ID before funds count as released. That ordering is what protects both
+ * sides from either party backing out mid-trade.
  *
  * Amount is denormalized from the proposal's already-locked
  * priceAtProposal, so it can never drift from what both parties agreed to.
->>>>>>> Stashed changes
  */
 
 const mongoose = require('mongoose');
@@ -69,7 +66,7 @@ const TransactionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['pending', 'delivered', 'awaiting_payment', 'paid', 'payment_failed'],
+      enum: ['pending', 'delivered', 'awaiting_payment', 'payment_submitted', 'paid', 'payment_failed'],
       default: 'pending',
       index: true,
     },
@@ -83,18 +80,26 @@ const TransactionSchema = new mongoose.Schema(
     requesterConfirmed: { type: Boolean, default: false },
     requesterConfirmedAt: Date,
 
-    // Step 3: the actual SSLCommerz payment.
+    // Step 3: how the requester actually paid — offline (trusted, one-step)
+    // or bKash (requester submits a Transaction ID, provider verifies it).
     payment: {
-      method: { type: String, default: null }, // e.g. "bKash", "Visa" — from SSLCommerz's card_issuer/card_type
+      method: { type: String, enum: ['offline', 'bkash', null], default: null },
       status: {
         type: String,
-        enum: ['unpaid', 'initiated', 'paid', 'failed'],
+        enum: ['unpaid', 'pending_verification', 'paid', 'initiated', 'failed'],
         default: 'unpaid',
       },
-      tranId: { type: String, default: null, index: true }, // our generated tran_id for this payment attempt
-      valId: { type: String, default: null }, // SSLCommerz's val_id, used to validate authenticity server-side
-      gatewayResponse: { type: mongoose.Schema.Types.Mixed, default: null }, // raw validation response, for audit/debug
+      bkashTransactionId: { type: String, default: null }, // TrxID the requester typed in, for the provider to verify
+      submittedAt: { type: Date, default: null }, // when the bKash Transaction ID was submitted
+      verifiedAt: { type: Date, default: null }, // when the provider verified it
       paidAt: { type: Date, default: null },
+
+      // Legacy SSLCommerz fields — no longer written by the active payment
+      // flow, kept only so payment.controller.js's (now-unreachable)
+      // webhook handlers don't break if ever hit.
+      tranId: { type: String, default: null, index: true },
+      valId: { type: String, default: null },
+      gatewayResponse: { type: mongoose.Schema.Types.Mixed, default: null },
     },
 
     // Set the moment payment is validated — when funds are considered

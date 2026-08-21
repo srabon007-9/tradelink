@@ -265,8 +265,8 @@ const Dashboard = () => {
                 <div key={tx._id} className="flex items-center justify-between p-4 hover:bg-concrete-50/50 transition-colors">
                   <div className="min-w-0 flex-1 pr-4">
                     <div className="flex items-center gap-2">
-                      <Badge color={tx.status === 'released' ? 'green' : 'yellow'}>
-                        {tx.status === 'released' ? 'Released' : 'Pending Escrow'}
+                      <Badge color={tx.status === 'paid' ? 'green' : 'yellow'}>
+                        {tx.status === 'paid' ? 'Paid' : 'Pending Escrow'}
                       </Badge>
                       <p className="truncate text-sm font-medium text-slate-950">{tx.listingTitle}</p>
                     </div>
