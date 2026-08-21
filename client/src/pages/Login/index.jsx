@@ -8,9 +8,11 @@ import { ROUTES } from '../../constants';
 import Logo from '../../components/common/Logo';
 import Button from '../../components/ui/Button';
 import AuthContext from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 const Login = () => {
   const { login, isLoading } = useContext(AuthContext);
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: '', password: '' });
@@ -33,9 +35,11 @@ const Login = () => {
     const result = await login(form.email, form.password);
 
     if (result.success) {
+      addToast('Signed in successfully!', 'success');
       navigate(ROUTES.DASHBOARD);
     } else {
       setError(result.message);
+      addToast(result.message || 'Login failed', 'error');
     }
   };
 

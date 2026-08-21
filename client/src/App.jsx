@@ -1,15 +1,18 @@
 /**
  * App.jsx — Root Application Component
  *
- * Wraps the app in context providers and renders the router.
+ * Wraps the app in AuthProvider & ToastProvider context providers.
  */
 
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import AppRouter from './routes/AppRouter';
 
 const App = () => (
   <AuthProvider>
-    <AppRouter />
+    <ToastProvider>
+      <AppRouter />
+    </ToastProvider>
   </AuthProvider>
 );
 

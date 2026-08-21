@@ -3,23 +3,32 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { NAV_LINKS, ROUTES } from '../../constants';
 import useAuth from '../../hooks/useAuth';
 
 const Navbar = () => {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen]   = useState(false);
   const [isScrolled, setIsScrolled]   = useState(false);
+
+  const profileButtonLabel = user?.name || (user?.role ? `${user.role} Profile` : 'My Profile');
+
+  const closeMenu = () => setIsMenuOpen(false);
+
+  const handleLogout = async () => {
+    closeMenu();
+    await logout();
+    navigate('/');
+  };
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const closeMenu = () => setIsMenuOpen(false);
 
   return (
     <header
@@ -58,9 +67,25 @@ const Navbar = () => {
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <Link to={ROUTES.DASHBOARD} className="btn-primary">
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  to={ROUTES.PROFILE}
+                  className="px-4 py-2 rounded-md border border-navy-800 text-sm font-semibold text-navy-900 hover:bg-navy-50 transition-colors duration-150 inline-flex items-center gap-1.5"
+                >
+                  <svg className="h-4 w-4 text-navy-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>{profileButtonLabel}</span>
+                </Link>
+                <button
+                  id="navbar-logout-btn"
+                  type="button"
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-md border border-concrete-300 text-sm font-semibold text-steel-700 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors duration-150"
+                >
+                  Log Out
+                </button>
+              </>
             ) : (
               <>
                 <Link
@@ -120,13 +145,26 @@ const Navbar = () => {
             ))}
             <div className="border-t border-concrete-200 pt-3 mt-1 flex flex-col gap-2">
               {isLoggedIn ? (
-                <Link
-                  to={ROUTES.DASHBOARD}
-                  onClick={closeMenu}
-                  className="btn-primary text-center"
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    to={ROUTES.PROFILE}
+                    onClick={closeMenu}
+                    className="px-4 py-3 rounded-md border border-navy-800 text-sm font-semibold text-navy-900 hover:bg-navy-50 transition-colors text-center inline-flex items-center justify-center gap-2"
+                  >
+                    <svg className="h-4 w-4 text-navy-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>{profileButtonLabel}</span>
+                  </Link>
+                  <button
+                    id="navbar-mobile-logout-btn"
+                    type="button"
+                    onClick={handleLogout}
+                    className="px-4 py-3 rounded-md border border-concrete-300 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors text-center"
+                  >
+                    Log Out
+                  </button>
+                </>
               ) : (
                 <>
                   <Link

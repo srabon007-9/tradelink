@@ -5,16 +5,19 @@
  */
 
 const tradeProposalService = require('../services/tradeProposal.service');
+const rushPricingService = require('../services/rushPricing.service');
 
 const tradeProposalController = {
   // ─── POST /api/trade-proposals ───────────────────────────────────────────────
   createProposal: async (req, res, next) => {
     try {
-      const { listingId, proposedSessionAt, message } = req.body;
+      const { listingId, proposedSessionAt, message, creditsToRedeem, isUrgent } = req.body;
       const proposal = await tradeProposalService.createProposal(req.user.id, {
         listingId,
         proposedSessionAt,
         message,
+        creditsToRedeem,
+        isUrgent,
       });
 
       return res.status(201).json({
@@ -22,6 +25,20 @@ const tradeProposalController = {
         message: 'Trade proposal sent — waiting for the provider to accept.',
         data: proposal,
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ─── GET /api/trade-proposals/rush-preview ───────────────────────────────────
+  // Live Time-Decay Rush Pricing preview before submitting — pure calculation,
+  // no side effects.
+  previewRush: async (req, res, next) => {
+    try {
+      const priceBDT = Number(req.query.priceBDT);
+      const deadline = new Date(req.query.deadline);
+      const preview = rushPricingService.applyRushPricing(priceBDT, deadline);
+      return res.status(200).json({ success: true, data: preview });
     } catch (err) {
       next(err);
     }

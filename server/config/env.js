@@ -11,9 +11,9 @@ require('dotenv').config();
 
 /**
  * Required variables for the server to start.
- * Add more here as features are implemented.
+ * Note: Do NOT list PORT here, as Vercel serverless environments do not define PORT.
  */
-const REQUIRED_VARS = ['MONGO_URI', 'PORT'];
+const REQUIRED_VARS = ['MONGO_URI', 'JWT_SECRET'];
 
 /**
  * Validates required environment variables.
@@ -25,7 +25,7 @@ const validateEnv = () => {
   if (missing.length > 0) {
     throw new Error(
       `[ENV] Missing required environment variables: ${missing.join(', ')}\n` +
-      `Please copy .env.example to server/.env and fill in the values.`
+      `Please check your .env file or Vercel Environment Variables.`
     );
   }
 };

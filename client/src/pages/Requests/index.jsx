@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const STATUS_COLORS = {
@@ -44,11 +45,32 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
             <span className="font-medium text-steel-800">{counterparty?.name || 'Unknown'}</span>
           </p>
         </div>
-        <p className="text-lg font-bold text-navy-900">{formatCurrency(proposal.priceAtProposal)}</p>
+        <div className="text-right">
+          <p className="text-lg font-bold text-navy-900">{formatCurrency(proposal.finalPriceBDT)}</p>
+          {proposal.rushSurchargeBDT > 0 && (
+            <p className="text-xs text-amber-600">
+              <span className="line-through">{formatCurrency(proposal.priceAtProposal)}</span>{' '}
+              +{formatCurrency(proposal.rushSurchargeBDT)} rush (×{proposal.rushMultiplier})
+            </p>
+          )}
+          {proposal.creditsRedeemed > 0 && (
+            <p className="text-xs text-steel-500">
+              −{formatCurrency(proposal.discountBDT)} ({proposal.creditsRedeemed} credit
+              {proposal.creditsRedeemed !== 1 ? 's' : ''} redeemed)
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-1 text-sm text-steel-600 sm:grid-cols-2">
-        <p>Proposed session: {formatDateTime(proposal.proposedSessionAt)}</p>
+        <p>
+          Proposed session: {formatDateTime(proposal.proposedSessionAt)}
+          {proposal.isUrgent && (
+            <Badge color="yellow" className="ml-2">
+              Urgent
+            </Badge>
+          )}
+        </p>
         <p>Sent {formatDate(proposal.createdAt)}</p>
       </div>
 
@@ -104,6 +126,7 @@ const ProposalCard = ({ proposal, role, busy, onAccept, onDecline, onCancel }) =
 };
 
 const Requests = () => {
+  const { addToast } = useToast();
   const [tab, setTab] = useState('received');
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
@@ -135,12 +158,20 @@ const Requests = () => {
     try {
       if (action === 'cancel') {
         await api.delete(`/trade-proposals/${id}`);
+        addToast('Trade proposal cancelled', 'info');
       } else {
         await api.patch(`/trade-proposals/${id}/${action}`);
+        if (action === 'accept') {
+          addToast('Trade proposal accepted! Calendar invite & escrow hold created.', 'success');
+        } else if (action === 'decline') {
+          addToast('Trade proposal declined', 'info');
+        }
       }
       loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
+      setError(msg);
+      addToast(msg, 'error');
     } finally {
       setBusyId(null);
     }

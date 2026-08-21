@@ -8,9 +8,11 @@ import { ROUTES } from '../../constants';
 import Logo from '../../components/common/Logo';
 import Button from '../../components/ui/Button';
 import AuthContext from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 const Register = () => {
   const { register, isLoading } = useContext(AuthContext);
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -45,9 +47,11 @@ const Register = () => {
 
     if (result.success) {
       setSuccess('Account created! Redirecting to dashboard…');
+      addToast('Account created successfully! Welcome to TradeLink.', 'success');
       setTimeout(() => navigate(ROUTES.DASHBOARD), 1500);
     } else {
       setError(result.message);
+      addToast(result.message || 'Registration failed', 'error');
     }
   };
 

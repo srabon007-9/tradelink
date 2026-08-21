@@ -25,7 +25,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password is required'],
       minlength: [8, 'Password must be at least 8 characters'],
-      select: false, // never returned in queries by default
+      select: false,
     },
     avatar: { type: String, default: '' },
     bio: { type: String, default: '' },
@@ -38,6 +38,7 @@ const UserSchema = new mongoose.Schema(
     },
     assignedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
     isVerified: { type: Boolean, default: false },
+    isSuspended: { type: Boolean, default: false },
     refreshToken: { type: String, select: false },
   },
   { timestamps: true }
@@ -45,7 +46,7 @@ const UserSchema = new mongoose.Schema(
 
 // ─── Hash password before saving ─────────────────────────────────────────────
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) {return next();}
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
@@ -70,6 +71,7 @@ UserSchema.methods.toPublicJSON = function () {
     phone: this.phone,
     role: this.role,
     isVerified: this.isVerified,
+    isSuspended: this.isSuspended,
     createdAt: this.createdAt,
   };
 };

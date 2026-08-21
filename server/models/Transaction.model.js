@@ -9,13 +9,6 @@
  * requester and the provider independently confirm the work/session was
  * completed. This is what protects both sides from either party backing
  * out mid-trade.
- *
- * There's no payment gateway or credit wallet wired up yet (those are
- * separate, not-yet-built features), so this models the escrow *state* —
- * the ledger record and its pending/released lifecycle — rather than
- * moving real money. Amount is denormalized from the proposal's already-
- * locked priceAtProposal, so it can never drift from what both parties
- * actually agreed to.
  */
 
 const mongoose = require('mongoose');

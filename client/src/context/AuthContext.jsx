@@ -1,7 +1,7 @@
 /**
  * context/AuthContext.jsx — Authentication Context
  *
- * Provides auth state and actions to the entire app.
+ * Provides auth state and user info to the entire app.
  */
 
 import { createContext, useState } from 'react';
@@ -12,7 +12,6 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Restore user from localStorage on page reload
     try {
       const stored = localStorage.getItem('tl_user');
       return stored ? JSON.parse(stored) : null;
@@ -20,12 +19,9 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
+
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Register a new user.
-   * @param {{ name, email, password, role? }} data
-   */
   const register = async data => {
     setIsLoading(true);
     try {
@@ -36,19 +32,13 @@ export const AuthProvider = ({ children }) => {
       setUser(newUser);
       return { success: true, user: newUser };
     } catch (err) {
-      const message =
-        err.response?.data?.message || 'Registration failed. Please try again.';
+      const message = err.response?.data?.message || 'Registration failed. Please try again.';
       return { success: false, message };
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Login an existing user.
-   * @param {string} email
-   * @param {string} password
-   */
   const login = async (email, password) => {
     setIsLoading(true);
     try {
@@ -59,8 +49,7 @@ export const AuthProvider = ({ children }) => {
       setUser(loggedInUser);
       return { success: true, user: loggedInUser };
     } catch (err) {
-      const message =
-        err.response?.data?.message || 'Login failed. Please try again.';
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
       return { success: false, message };
     } finally {
       setIsLoading(false);
@@ -79,6 +68,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async profileData => {
+    setIsLoading(true);
+    try {
+      const res = await api.patch('/users/profile', profileData);
+      const updatedUser = res.data.data;
+      localStorage.setItem('tl_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to update profile.';
+      return { success: false, message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     isLoading,
@@ -86,6 +91,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

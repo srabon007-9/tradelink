@@ -3,14 +3,20 @@
  */
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  import.meta.env.VITE_API_URL || '/api';
 
 export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/register',
-  BROWSE: '/browse',
+  BROWSE: '/dashboard/browse',
+  PUBLIC_BROWSE: '/browse',
   DASHBOARD: '/dashboard',
+  PROFILE: '/dashboard/profile',
+  MY_SKILLS: '/dashboard/skills',
+  WALLET: '/dashboard/wallet',
+  TRANSACTIONS: '/dashboard/transactions',
+  WATCHLIST: '/dashboard/watchlist',
   ABOUT: '/about',
   CONTACT: '/contact',
 };
@@ -31,12 +37,31 @@ export const NAV_LINKS = [
 ];
 
 export const SKILL_CATEGORIES = [
-  { id: 'web-development', label: 'Web Development' },
-  { id: 'graphic-design', label: 'Graphic Design' },
-  { id: 'content-writing', label: 'Content Writing' },
-  { id: 'digital-marketing', label: 'Digital Marketing' },
-  { id: 'data-analysis', label: 'Data Analysis' },
-  { id: 'business-support', label: 'Business Support' },
+  'Programming',
+  'Graphic Design',
+  'UI/UX',
+  'Video Editing',
+  'Writing',
+  'Tutoring',
+  'Music',
+  'Photography',
+  'Marketing',
+  'Career Advice',
+  'Language Learning',
+  'Other',
+];
+
+export const EXPERIENCE_LEVELS = [
+  'Beginner',
+  'Intermediate',
+  'Advanced',
+  'Expert',
+];
+
+export const SKILL_STATUSES = [
+  'active',
+  'paused',
+  'draft',
 ];
 
 export const SKILL_LISTINGS = [
@@ -45,7 +70,7 @@ export const SKILL_LISTINGS = [
     title: 'React Frontend Support',
     member: 'Ayesha Rahman',
     initials: 'AR',
-    category: 'Web Development',
+    category: 'Programming',
     availability: 'Available',
     rate: '৳1,500/hr',
     match: 92,
@@ -69,7 +94,7 @@ export const SKILL_LISTINGS = [
     title: 'SEO Blog Writing',
     member: 'Tasmia Chowdhury',
     initials: 'TC',
-    category: 'Content Writing',
+    category: 'Writing',
     availability: 'Available',
     rate: '৳2,500/article',
     match: 88,
@@ -81,7 +106,7 @@ export const SKILL_LISTINGS = [
     title: 'Facebook Ads Setup',
     member: 'Imran Kabir',
     initials: 'IK',
-    category: 'Digital Marketing',
+    category: 'Marketing',
     availability: 'Available',
     rate: '৳8,000/campaign',
     match: 79,
@@ -93,7 +118,7 @@ export const SKILL_LISTINGS = [
     title: 'Excel Dashboard Builder',
     member: 'Farzana Akter',
     initials: 'FA',
-    category: 'Data Analysis',
+    category: 'Other',
     availability: 'Booked This Week',
     rate: '৳10,000/project',
     match: 81,
@@ -105,7 +130,7 @@ export const SKILL_LISTINGS = [
     title: 'Virtual Admin Assistance',
     member: 'Sadia Islam',
     initials: 'SI',
-    category: 'Business Support',
+    category: 'Career Advice',
     availability: 'Available',
     rate: '৳900/hr',
     match: 76,

@@ -37,6 +37,37 @@ const userController = {
       next(err);
     }
   },
+
+  /**
+   * PATCH /api/users/profile
+   * Updates authenticated user's profile details (name, bio, company, phone, avatar).
+   */
+  updateProfile: async (req, res, next) => {
+    try {
+      const { name, bio, company, phone, avatar } = req.body;
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      if ('name' in req.body) {user.name = name;}
+      if ('bio' in req.body) {user.bio = bio;}
+      if ('company' in req.body) {user.company = company;}
+      if ('phone' in req.body) {user.phone = phone;}
+      if ('avatar' in req.body) {user.avatar = avatar;}
+
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: user.toPublicJSON(),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = userController;
