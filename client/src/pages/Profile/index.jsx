@@ -214,6 +214,9 @@ const Profile = () => {
     company: user?.company || '',
     phone: user?.phone || '',
     avatar: user?.avatar || '',
+    city: user?.location?.city || '',
+    lat: user?.location?.lat ?? '',
+    lng: user?.location?.lng ?? '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
@@ -245,6 +248,9 @@ const Profile = () => {
       company: user.company || '',
       phone: user.phone || '',
       avatar: user.avatar || '',
+      city: user.location?.city || '',
+      lat: user.location?.lat ?? '',
+      lng: user.location?.lng ?? '',
     });
     setStatusMessage({ type: '', text: '' });
     setIsEditing(true);
@@ -270,6 +276,14 @@ const Profile = () => {
       return;
     }
 
+    const hasLat = form.lat !== '';
+    const hasLng = form.lng !== '';
+    if (hasLat !== hasLng) {
+      setStatusMessage({ type: 'error', text: 'Enter both latitude and longitude, or leave both blank.' });
+      addToast('Enter both latitude and longitude, or leave both blank.', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await updateProfile({
@@ -278,6 +292,11 @@ const Profile = () => {
         company: form.company.trim(),
         phone: form.phone.trim(),
         avatar: form.avatar.trim(),
+        location: {
+          city: form.city.trim(),
+          lat: hasLat ? Number(form.lat) : null,
+          lng: hasLng ? Number(form.lng) : null,
+        },
       });
 
       if (res.success) {
@@ -431,6 +450,59 @@ const Profile = () => {
             </div>
 
             <div>
+              <p className="mb-1.5 text-sm font-medium text-steel-700">
+                Location <span className="text-xs text-steel-400">(Optional — used for Trade Chains' in-person meeting-point suggestions)</span>
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="profile-city" className="mb-1.5 block text-xs font-medium text-steel-600">
+                    City
+                  </label>
+                  <input
+                    id="profile-city"
+                    name="city"
+                    type="text"
+                    placeholder="e.g. Dhaka"
+                    className="input-base"
+                    value={form.city}
+                    onChange={handleChange}
+                    maxLength={100}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-lat" className="mb-1.5 block text-xs font-medium text-steel-600">
+                    Latitude
+                  </label>
+                  <input
+                    id="profile-lat"
+                    name="lat"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 23.8103"
+                    className="input-base"
+                    value={form.lat}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-lng" className="mb-1.5 block text-xs font-medium text-steel-600">
+                    Longitude
+                  </label>
+                  <input
+                    id="profile-lng"
+                    name="lng"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 90.4125"
+                    className="input-base"
+                    value={form.lng}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
               <label htmlFor="profile-bio" className="mb-1.5 block text-sm font-medium text-steel-700">
                 Bio / About Yourself
               </label>
@@ -465,6 +537,7 @@ const Profile = () => {
               <Field label="Phone Number" value={user.phone} />
               <Field label="Role" value={user.role} />
               <Field label="Member Since" value={user.createdAt ? formatDate(user.createdAt) : null} />
+              <Field label="Location" value={user.location?.city} />
             </div>
 
             <div className="mt-6 border-t border-concrete-200 pt-6">
