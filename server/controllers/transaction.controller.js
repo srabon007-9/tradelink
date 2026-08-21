@@ -7,10 +7,17 @@
 const transactionService = require('../services/transaction.service');
 
 const transactionController = {
+  // ─── GET /api/transactions/mine ──────────────────────────────────────────────
   getMyTransactions: async (req, res, next) => {
     try {
-      const data = await transactionService.getMyTransactions(req.user.id);
-      return res.status(200).json({ success: true, data });
+      const data = await transactionService.getMyTransactions(
+        req.user.id
+      );
+
+      return res.status(200).json({
+        success: true,
+        data,
+      });
     } catch (err) {
       next(err);
     }
@@ -19,18 +26,31 @@ const transactionController = {
   // ─── GET /api/transactions/income/mine ───────────────────────────────────────
   getMyIncome: async (req, res, next) => {
     try {
-      const income = await transactionService.getMyIncome(req.user.id);
-      return res.status(200).json({ success: true, data: income });
+      const income = await transactionService.getMyIncome(
+        req.user.id
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: income,
+      });
     } catch (err) {
       next(err);
     }
   },
 
-  // ─── GET /api/transactions/:id ───────────────────────────────────────────────
+  // ─── GET /api/transactions/:id ──────────────────────────────────────────────
   getById: async (req, res, next) => {
     try {
-      const data = await transactionService.getTransactionById(req.params.id, req.user.id);
-      return res.status(200).json({ success: true, data });
+      const data = await transactionService.getTransactionById(
+        req.params.id,
+        req.user.id
+      );
+
+      return res.status(200).json({
+        success: true,
+        data,
+      });
     } catch (err) {
       next(err);
     }
@@ -39,10 +59,16 @@ const transactionController = {
   // ─── PATCH /api/transactions/:id/deliver ─────────────────────────────────────
   confirmDelivery: async (req, res, next) => {
     try {
-      const transaction = await transactionService.confirmDelivery(req.params.id, req.user.id);
+      const transaction =
+        await transactionService.confirmDelivery(
+          req.params.id,
+          req.user.id
+        );
+
       return res.status(200).json({
         success: true,
-        message: 'Delivery confirmed. Waiting for the buyer to confirm they received it.',
+        message:
+          'Delivery confirmed. Waiting for the buyer to confirm they received it.',
         data: transaction,
       });
     } catch (err) {
@@ -50,13 +76,19 @@ const transactionController = {
     }
   },
 
-  // ─── PATCH /api/transactions/:id/receive ─────────────────────────────────────
+  // ─── PATCH /api/transactions/:id/receive ────────────────────────────────────
   confirmReceipt: async (req, res, next) => {
     try {
-      const transaction = await transactionService.confirmReceipt(req.params.id, req.user.id);
+      const transaction =
+        await transactionService.confirmReceipt(
+          req.params.id,
+          req.user.id
+        );
+
       return res.status(200).json({
         success: true,
-        message: 'Receipt confirmed. You can now pay to release funds to the provider.',
+        message:
+          'Receipt confirmed. You can now pay to release funds to the provider.',
         data: transaction,
       });
     } catch (err) {

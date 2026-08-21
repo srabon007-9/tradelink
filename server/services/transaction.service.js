@@ -44,12 +44,22 @@ const logger = require('../utils/logger');
 
 /** Confirms the user is a party to the transaction and returns which side. */
 const assertParty = (transaction, userId) => {
-  const isRequester = transaction.requester.toString() === userId;
-  const isProvider = transaction.provider.toString() === userId;
+  const isRequester =
+    transaction.requester.toString() === userId;
+
+  const isProvider =
+    transaction.provider.toString() === userId;
+
   if (!isRequester && !isProvider) {
-    throw ApiError.forbidden('You are not part of this transaction');
+    throw ApiError.forbidden(
+      'You are not part of this transaction'
+    );
   }
-  return { isRequester, isProvider };
+
+  return {
+    isRequester,
+    isProvider,
+  };
 };
 
 /** Shorthand for the 'transaction' category notifications fired at each lifecycle step below. */
@@ -84,13 +94,17 @@ const awardCompletionCredits = async transaction => {
 
 const transactionService = {
   /**
-   * Called from tradeProposal.service.js the instant a proposal is
-   * accepted — opens the escrow hold for that trade.
-   * @param {import('../models/TradeProposal.model')} proposal
+   * Called when a trade proposal is accepted.
+   * Opens the escrow transaction.
    */
   createForProposal: async proposal => {
-    const existing = await Transaction.findOne({ tradeProposal: proposal._id });
-    if (existing) {return existing;} // safety net — a proposal only ever gets accepted once
+    const existing = await Transaction.findOne({
+      tradeProposal: proposal._id,
+    });
+
+    if (existing) {
+      return existing;
+    }
 
     const transaction = await Transaction.create({
       tradeProposal: proposal._id,
@@ -100,13 +114,24 @@ const transactionService = {
       amount: proposal.finalPriceBDT,
     });
 
-    logger.info(`[Transaction] Escrow opened for proposal ${proposal._id} — ৳${transaction.amount} BDT pending delivery.`);
+    logger.info(
+      `[Transaction] Escrow opened for proposal ${proposal._id} — ` +
+      `৳${transaction.amount} BDT pending delivery.`
+    );
+
     return transaction;
   },
 
-  /** Every transaction the user is party to, with their role in each. */
+  /**
+   * Every transaction the logged-in user is part of.
+   */
   getMyTransactions: async userId => {
-    const transactions = await Transaction.find({ $or: [{ requester: userId }, { provider: userId }] })
+    const transactions = await Transaction.find({
+      $or: [
+        { requester: userId },
+        { provider: userId },
+      ],
+    })
       .sort({ createdAt: -1 })
       .populate('requester', 'name email avatar')
       .populate('provider', 'name email avatar')
@@ -114,20 +139,30 @@ const transactionService = {
 
     return transactions.map(t => ({
       ...t,
-      viewerRole: t.requester._id.toString() === userId ? 'requester' : 'provider',
+      viewerRole:
+        t.requester._id.toString() === userId
+          ? 'requester'
+          : 'provider',
     }));
   },
 
+  /**
+   * Get one transaction.
+   */
   getTransactionById: async (id, userId) => {
     const transaction = await Transaction.findById(id)
       .populate('requester', 'name email avatar')
       .populate('provider', 'name email avatar');
     if (!transaction) {throw ApiError.notFound('Transaction not found');}
     assertParty(transaction, userId);
+
     return transaction;
   },
 
-  /** Step 1 — provider confirms the service was delivered. */
+  /**
+   * Step 1:
+   * Provider confirms that the service was delivered.
+   */
   confirmDelivery: async (id, userId) => {
     const transaction = await Transaction.findById(id);
     if (!transaction) {throw ApiError.notFound('Transaction not found');}
@@ -135,12 +170,16 @@ const transactionService = {
 
     if (!isProvider) {throw ApiError.forbidden('Only the provider can confirm delivery');}
     if (transaction.status !== 'pending') {
-      throw ApiError.badRequest(`Delivery was already confirmed for this transaction (status: ${transaction.status})`);
+      throw ApiError.badRequest(
+        `Delivery was already confirmed for this transaction ` +
+        `(status: ${transaction.status})`
+      );
     }
 
     transaction.providerConfirmed = true;
     transaction.providerConfirmedAt = new Date();
     transaction.status = 'delivered';
+
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} marked delivered by provider.`);
@@ -154,7 +193,10 @@ const transactionService = {
     return transaction;
   },
 
-  /** Step 2 — requester confirms they received the service. Must follow delivery. */
+  /**
+   * Step 2:
+   * Requester confirms they received the service.
+   */
   confirmReceipt: async (id, userId) => {
     const transaction = await Transaction.findById(id);
     if (!transaction) {throw ApiError.notFound('Transaction not found');}
@@ -162,15 +204,23 @@ const transactionService = {
 
     if (!isRequester) {throw ApiError.forbidden('Only the requester can confirm receipt');}
     if (transaction.status === 'pending') {
-      throw ApiError.badRequest("The provider hasn't confirmed delivery yet — there's nothing to confirm.");
+      throw ApiError.badRequest(
+        "The provider hasn't confirmed delivery yet — " +
+        "there's nothing to confirm."
+      );
     }
+
     if (transaction.status !== 'delivered') {
-      throw ApiError.badRequest(`Receipt was already confirmed for this transaction (status: ${transaction.status})`);
+      throw ApiError.badRequest(
+        `Receipt was already confirmed for this transaction ` +
+        `(status: ${transaction.status})`
+      );
     }
 
     transaction.requesterConfirmed = true;
     transaction.requesterConfirmedAt = new Date();
     transaction.status = 'awaiting_payment';
+
     await transaction.save();
 
     logger.info(`[Transaction] ${transaction._id} receipt confirmed by requester — ready for payment.`);
@@ -303,56 +353,76 @@ const transactionService = {
   },
 
   /**
-   * Finalizes a payment after SSLCommerz confirms it — called from both
-   * the success redirect and the IPN webhook. Idempotent: whichever
-   * fires first wins, the second call is a no-op.
+   * Finalizes a payment after SSLCommerz validation.
    *
-   * @param {string} tranId
-   * @param {string} valId
+   * Called by success redirect and IPN webhook.
    */
   finalizePayment: async (tranId, valId) => {
     if (!tranId) {return null;}
 
-    const transaction = await Transaction.findOne({ 'payment.tranId': tranId });
     if (!transaction) {
-      logger.error(`[Transaction] Payment callback for unknown tran_id: ${tranId}`);
+      logger.error(
+        `[Transaction] Payment callback for unknown ` +
+        `tran_id: ${tranId}`
+      );
+
       return null;
     }
 
     if (transaction.status === 'paid') {return transaction;} // already finalized — idempotent
 
     let validation;
+
     try {
-      validation = await sslcommerzService.validateTransaction(valId);
+      validation =
+        await sslcommerzService.validateTransaction(
+          valId
+        );
     } catch (err) {
-      logger.error(`[Transaction] SSLCommerz validation call failed for ${transaction._id}: ${err.message}`);
+      logger.error(
+        `[Transaction] SSLCommerz validation call failed ` +
+        `for ${transaction._id}: ${err.message}`
+      );
+
       transaction.payment.status = 'failed';
       transaction.status = 'payment_failed';
+
       await transaction.save();
+
       return transaction;
     }
 
-    const amountMatches = Math.round(validation.amount) === Math.round(transaction.amount);
+    const amountMatches =
+      Math.round(validation.amount) ===
+      Math.round(transaction.amount);
 
-    if (!validation.isValid || !amountMatches) {
+    if (
+      !validation.isValid ||
+      !amountMatches
+    ) {
       transaction.payment.status = 'failed';
-      transaction.payment.gatewayResponse = validation.raw;
-      transaction.status = 'payment_failed';
+
+      transaction.payment.gatewayResponse =
+        validation.raw;
+
+      transaction.status =
+        'payment_failed';
+
       await transaction.save();
+
       logger.error(
-        `[Transaction] Payment validation failed for ${transaction._id} (tran_id=${tranId}, amountMatches=${amountMatches}).`
+        `[Transaction] Payment validation failed for ` +
+        `${transaction._id} ` +
+        `(tran_id=${tranId}, ` +
+        `amountMatches=${amountMatches}).`
       );
+
       return transaction;
     }
 
     transaction.status = 'paid';
+
     transaction.payment.status = 'paid';
-    transaction.payment.valId = valId;
-    transaction.payment.method = validation.cardIssuer || validation.cardType || 'Unknown';
-    transaction.payment.gatewayResponse = validation.raw;
-    transaction.payment.paidAt = new Date();
-    transaction.releasedAt = new Date();
-    await transaction.save();
 
     logger.info(`[Transaction] Payment confirmed for ${transaction._id} — ৳${transaction.amount} BDT paid to provider.`);
 
@@ -366,18 +436,20 @@ const transactionService = {
     const transaction = await Transaction.findOne({ 'payment.tranId': tranId });
     if (!transaction || transaction.status === 'paid') {return transaction;}
 
-    transaction.payment.status = 'failed';
-    transaction.status = 'payment_failed';
     await transaction.save();
 
-    logger.info(`[Transaction] Payment marked failed/cancelled for ${transaction._id} (tran_id=${tranId}).`);
+    logger.info(
+      `[Transaction] Payment confirmed for ` +
+      `${transaction._id} — ` +
+      `৳${transaction.amount} BDT paid to provider.`
+    );
+
     return transaction;
   },
 
   /**
-   * Provider-only: total confirmed income + paid transaction history.
-   * Always scoped to the logged-in user — there's no route that exposes
-   * another member's income or payment history.
+   * Marks a payment attempt as failed/cancelled.
+   * The requester can retry.
    */
   getMyIncome: async providerId => {
     const paidTransactions = await Transaction.find({ provider: providerId, status: 'paid' })
@@ -385,7 +457,10 @@ const transactionService = {
       .populate('requester', 'name email avatar')
       .lean();
 
-    const totalIncome = paidTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const transaction =
+      await Transaction.findOne({
+        'payment.tranId': tranId,
+      });
 
     return { totalIncome, count: paidTransactions.length, transactions: paidTransactions };
   },

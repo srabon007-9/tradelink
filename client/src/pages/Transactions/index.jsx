@@ -109,27 +109,51 @@ const PayAction = ({ transaction, busy, onPayOffline, onPayBkash }) => {
 const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPayOffline, onPayBkash, onVerifyBkash, onRejectBkash }) => {
   const isRequester = transaction.viewerRole === 'requester';
   const isProvider = !isRequester;
-  const counterparty = isRequester ? transaction.provider : transaction.requester;
-  const meta = STATUS_META[transaction.status] || STATUS_META.pending;
+  const counterparty = isRequester
+    ? transaction.provider
+    : transaction.requester;
+
+  const meta =
+    STATUS_META[transaction.status] || STATUS_META.pending;
+
   const busy = busyId === transaction._id;
+
+  // FIX: isReleased was being used but never defined.
+  const isReleased =
+    transaction.status === 'released' ||
+    transaction.status === 'paid';
 
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold text-slate-950">{transaction.listingTitle}</h3>
+            <h3 className="text-base font-semibold text-slate-950">
+              {transaction.listingTitle}
+            </h3>
+
             <Badge color={meta.color}>{meta.label}</Badge>
           </div>
+
           <p className="mt-1 text-sm text-steel-600">
-            {isRequester ? "You're the requester" : "You're the provider"} — with{' '}
-            <span className="font-medium text-steel-800">{counterparty?.name || 'Unknown'}</span>
+            {isRequester
+              ? "You're the requester"
+              : "You're the provider"}{' '}
+            — with{' '}
+            <span className="font-medium text-steel-800">
+              {counterparty?.name || 'Unknown'}
+            </span>
           </p>
         </div>
-        <p className="text-lg font-bold text-navy-900">{formatCurrency(transaction.amount)}</p>
+
+        <p className="text-lg font-bold text-navy-900">
+          {formatCurrency(transaction.amount)}
+        </p>
       </div>
 
-      <p className="mt-3 text-xs text-steel-500">Opened {formatDate(transaction.createdAt)}</p>
+      <p className="mt-3 text-xs text-steel-500">
+        Opened {formatDate(transaction.createdAt)}
+      </p>
 
       {/* ─── Progress trail ─────────────────────────────────────────────── */}
       <div className="mt-3 flex flex-wrap gap-4 rounded-md border border-concrete-200 bg-concrete-50 p-3 text-xs">
@@ -155,21 +179,29 @@ const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPayOffli
       {/* ─── Action area — one action visible at a time, per role/step ──── */}
       <div className="mt-4">
         {transaction.status === 'pending' && isProvider && (
-          <Button size="sm" disabled={busy} onClick={() => onDeliver(transaction._id)}>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => onDeliver(transaction._id)}
+          >
             {busy ? 'Confirming…' : 'Mark Service as Delivered'}
           </Button>
         )}
+
         {transaction.status === 'pending' && isRequester && (
-          <p className="text-sm text-steel-600">Waiting for the provider to deliver the service.</p>
+          <p className="text-sm text-steel-600">
+            Waiting for the provider to deliver the service.
+          </p>
         )}
 
         {transaction.status === 'delivered' && isRequester && (
-          <Button size="sm" disabled={busy} onClick={() => onReceive(transaction._id)}>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => onReceive(transaction._id)}
+          >
             {busy ? 'Confirming…' : "Confirm I've Received the Service"}
           </Button>
-        )}
-        {transaction.status === 'delivered' && isProvider && (
-          <p className="text-sm text-steel-600">Waiting for the buyer to confirm they received it.</p>
         )}
 
         {transaction.status === 'awaiting_payment' && isRequester && (
@@ -177,7 +209,7 @@ const TransactionCard = ({ transaction, busyId, onDeliver, onReceive, onPayOffli
         )}
         {transaction.status === 'awaiting_payment' && isProvider && (
           <p className="text-sm text-steel-600">
-            Waiting for {counterparty?.name || 'the buyer'} to complete payment.
+            Waiting for the buyer to confirm they received it.
           </p>
         )}
 
@@ -219,42 +251,74 @@ const IncomeTab = () => {
   useEffect(() => {
     api
       .get('/transactions/income/mine')
-      .then(res => setIncome(res.data.data))
-      .catch(() => setIncome({ totalIncome: 0, count: 0, transactions: [] }))
+      .then((res) => setIncome(res.data.data))
+      .catch(() =>
+        setIncome({
+          totalIncome: 0,
+          count: 0,
+          transactions: [],
+        })
+      )
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
-    return <div className="flex justify-center py-16 text-sm text-steel-600">Loading your income…</div>;
+    return (
+      <div className="flex justify-center py-16 text-sm text-steel-600">
+        Loading your income…
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <p className="text-sm text-steel-600">Total confirmed income</p>
-        <p className="mt-1 text-3xl font-bold text-navy-900">{formatCurrency(income.totalIncome)}</p>
+        <p className="text-sm text-steel-600">
+          Total confirmed income
+        </p>
+
+        <p className="mt-1 text-3xl font-bold text-navy-900">
+          {formatCurrency(income.totalIncome)}
+        </p>
+
         <p className="mt-1 text-xs text-steel-500">
-          From {income.count} paid transaction{income.count === 1 ? '' : 's'} — visible only to you.
+          From {income.count} paid transaction
+          {income.count === 1 ? '' : 's'} — visible only to you.
         </p>
       </Card>
 
       {income.transactions.length === 0 ? (
         <div className="rounded-lg border border-concrete-200 bg-concrete-50 py-16 text-center">
-          <p className="text-base font-semibold text-slate-950">No paid transactions yet</p>
-          <p className="mt-2 text-sm text-steel-600">Completed, paid transactions where you're the provider show up here.</p>
+          <p className="text-base font-semibold text-slate-950">
+            No paid transactions yet
+          </p>
+
+          <p className="mt-2 text-sm text-steel-600">
+            Completed, paid transactions where you're the provider show up
+            here.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {income.transactions.map(t => (
-            <Card key={t._id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+          {income.transactions.map((t) => (
+            <Card
+              key={t._id}
+              className="flex flex-wrap items-center justify-between gap-3 p-4"
+            >
               <div>
-                <p className="text-sm font-semibold text-slate-950">{t.listingTitle}</p>
+                <p className="text-sm font-semibold text-slate-950">
+                  {t.listingTitle}
+                </p>
+
                 <p className="text-xs text-steel-500">
                   From {t.requester?.name || 'Unknown'} · Paid {formatDate(t.payment?.paidAt)}
                   {t.payment?.method ? ` · ${PAYMENT_METHOD_LABELS[t.payment.method] || t.payment.method}` : ''}
                 </p>
               </div>
-              <p className="text-base font-bold text-emerald-700">+{formatCurrency(t.amount)}</p>
+
+              <p className="text-base font-bold text-emerald-700">
+                +{formatCurrency(t.amount)}
+              </p>
             </Card>
           ))}
         </div>
@@ -270,11 +334,15 @@ const Transactions = () => {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
 
+  // FIX: tab was being used but was never defined.
+  const [tab, setTab] = useState('transactions');
+
   const load = () => {
     setLoading(true);
+
     api
       .get('/transactions/mine')
-      .then(res => setTransactions(res.data.data))
+      .then((res) => setTransactions(res.data.data))
       .catch(() => setTransactions([]))
       .finally(() => setLoading(false));
   };
@@ -287,6 +355,7 @@ const Transactions = () => {
   const runAction = async (id, path, method = 'patch', body) => {
     setError('');
     setBusyId(id);
+
     try {
       await api[method](`/transactions/${id}/${path}`, body);
       load();
@@ -305,15 +374,24 @@ const Transactions = () => {
   const handleRejectBkash = id => runAction(id, 'reject-bkash');
 
   const openCount = useMemo(
-    () => transactions.filter(t => !['paid'].includes(t.status)).length,
+    () =>
+      transactions.filter(
+        (t) => !['paid'].includes(t.status)
+      ).length,
     [transactions]
   );
 
   return (
     <div className="space-y-6">
       <div>
-        <span className="eyebrow mb-2">Escrow System</span>
-        <h1 className="text-3xl font-semibold text-slate-950">Transactions & Escrow</h1>
+        <span className="eyebrow mb-2">
+          Escrow System
+        </span>
+
+        <h1 className="text-3xl font-semibold text-slate-950">
+          Transactions & Escrow
+        </h1>
+
         <p className="mt-2 text-sm text-steel-600">
           When a trade proposal is accepted, its agreed price opens an escrow hold here. The provider
           delivers, the buyer confirms, then the buyer pays offline or with bKash — funds only count as
@@ -325,15 +403,20 @@ const Transactions = () => {
         <button
           onClick={() => setTab('transactions')}
           className={`px-4 py-2 text-sm font-semibold transition-colors ${
-            tab === 'transactions' ? 'border-b-2 border-navy-800 text-navy-900' : 'text-steel-600 hover:text-steel-800'
+            tab === 'transactions'
+              ? 'border-b-2 border-navy-800 text-navy-900'
+              : 'text-steel-600 hover:text-steel-800'
           }`}
         >
           Transactions
         </button>
+
         <button
           onClick={() => setTab('income')}
           className={`px-4 py-2 text-sm font-semibold transition-colors ${
-            tab === 'income' ? 'border-b-2 border-navy-800 text-navy-900' : 'text-steel-600 hover:text-steel-800'
+            tab === 'income'
+              ? 'border-b-2 border-navy-800 text-navy-900'
+              : 'text-steel-600 hover:text-steel-800'
           }`}
         >
           My Income
@@ -345,26 +428,39 @@ const Transactions = () => {
       ) : (
         <>
           {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
           )}
 
           {loading ? (
-            <div className="flex justify-center py-16 text-sm text-steel-600">Loading transactions…</div>
+            <div className="flex justify-center py-16 text-sm text-steel-600">
+              Loading transactions…
+            </div>
           ) : transactions.length === 0 ? (
             <div className="rounded-lg border border-concrete-200 bg-concrete-50 py-16 text-center">
-              <p className="text-base font-semibold text-slate-950">No transactions yet</p>
+              <p className="text-base font-semibold text-slate-950">
+                No transactions yet
+              </p>
+
               <p className="mt-2 text-sm text-steel-600">
-                Transactions appear here automatically once an accepted trade proposal opens an escrow hold.
+                Transactions appear here automatically once an accepted
+                trade proposal opens an escrow hold.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {openCount > 0 && (
                 <p className="text-sm text-steel-600">
-                  <span className="font-semibold text-slate-950">{openCount}</span> transaction{openCount !== 1 ? 's' : ''} in progress
+                  <span className="font-semibold text-slate-950">
+                    {openCount}
+                  </span>{' '}
+                  transaction
+                  {openCount !== 1 ? 's' : ''} in progress
                 </p>
               )}
-              {transactions.map(t => (
+
+              {transactions.map((t) => (
                 <TransactionCard
                   key={t._id}
                   transaction={t}
