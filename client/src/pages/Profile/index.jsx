@@ -17,6 +17,7 @@ import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import ReputationBadge from '../../components/common/ReputationBadge';
+import IpLocationBadge from '../../components/common/IpLocationBadge';
 import api from '../../services/api';
 import { getInitials, formatDate } from '../../utils/formatters';
 
@@ -339,6 +340,35 @@ const Profile = () => {
         )}
       </div>
 
+      {/* ── IP Geolocation 3rd-Party API Banner ───────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50/80 p-4 text-sm shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-lg text-sky-700">
+            🌐
+          </div>
+          <div>
+            <p className="font-semibold text-slate-950">
+              Live Location Auto-Detection <span className="ml-1 text-xs text-sky-700">(ip-api.com REST API)</span>
+            </p>
+            <p className="text-xs text-steel-600">
+              Auto-detects your city and country via external 3rd-party IP Geolocation REST API.
+            </p>
+          </div>
+        </div>
+        <IpLocationBadge
+          onAutoDetectLocation={geo => {
+            setForm(prev => ({
+              ...prev,
+              city: geo.city || prev.city,
+              lat: geo.lat ?? prev.lat,
+              lng: geo.lon ?? prev.lng,
+            }));
+            if (!isEditing) {setIsEditing(true);}
+            addToast(`Location set to ${geo.city}, ${geo.country} via ip-api.com!`, 'info');
+          }}
+        />
+      </div>
+
       {/* ── Status Banner ─────────────────────────────────────────────── */}
       {statusMessage.text && (
         <div
@@ -366,6 +396,20 @@ const Profile = () => {
               </Badge>
             </div>
             <p className="mt-1 text-sm text-steel-600">{user.email}</p>
+            <div className="mt-2">
+              <IpLocationBadge
+                onAutoDetectLocation={geo => {
+                  setForm(prev => ({
+                    ...prev,
+                    city: geo.city || prev.city,
+                    lat: geo.lat ?? prev.lat,
+                    lng: geo.lon ?? prev.lng,
+                  }));
+                  if (!isEditing) {setIsEditing(true);}
+                  addToast(`Location detected: ${geo.city}, ${geo.country} (via ip-api.com)`, 'info');
+                }}
+              />
+            </div>
           </div>
         </div>
 
