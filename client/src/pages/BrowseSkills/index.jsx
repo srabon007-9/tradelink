@@ -336,7 +336,7 @@ const BrowseSkills = () => {
                       tierColor={listing.reputation.tierColor}
                       breakdown={listing.reputation.breakdown}
                       size="sm"
-                      showBreakdown={true}
+                      showBreakdown={false}
                     />
                   )}
                 </div>
