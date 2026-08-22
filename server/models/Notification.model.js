@@ -13,7 +13,8 @@
  *
  * `category` groups notifications for the sidebar badge counts (one
  * badge per category, not per type) — 'request' → Requests link,
- * 'transaction' → Transactions link, 'profile' → My Profile link.
+ * 'transaction' → Transactions link, 'profile' → My Profile link,
+ * 'message' → Messages link.
  */
 
 const mongoose = require('mongoose');
@@ -28,7 +29,7 @@ const NotificationSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['request', 'transaction', 'profile'],
+      enum: ['request', 'transaction', 'profile', 'message'],
       required: true,
       index: true,
     },
@@ -52,6 +53,7 @@ const NotificationSchema = new mongoose.Schema(
         'chain_swap_accepted',
         'chain_swap_declined',
         'chain_swap_completed',
+        'new_message',
       ],
       required: true,
     },

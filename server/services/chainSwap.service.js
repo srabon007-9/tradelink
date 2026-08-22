@@ -12,6 +12,7 @@
 const ChainSwap = require('../models/ChainSwap.model');
 const SkillListing = require('../models/SkillListing.model');
 const notificationService = require('./notification.service');
+const conversationService = require('./conversation.service');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
@@ -85,6 +86,14 @@ const chainSwapService = {
 
     swap.status = 'accepted';
     await swap.save();
+
+    await conversationService.createConversation({
+      requesterId: swap.requester,
+      providerId: swap.provider,
+      relatedType: 'ChainSwap',
+      relatedId: swap._id,
+      listingTitle: swap.listingTitle,
+    });
 
     await notificationService.notify(swap.requester, {
       category: 'request',
@@ -172,6 +181,7 @@ const chainSwapService = {
 
     if (bothConfirmed) {
       logger.info(`[ChainSwap] ${swap._id} completed — both sides confirmed.`);
+      await conversationService.deleteConversation({ relatedType: 'ChainSwap', relatedId: swap._id });
       await Promise.all(
         [swap.requester.toString(), swap.provider.toString()].map(uid =>
           notificationService.notify(uid, {
